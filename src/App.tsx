@@ -10,12 +10,17 @@ import { useNavStore } from './store/useNavStore';
 import { useAutoHideHud } from './hooks/useAutoHideHud';
 
 export default function App() {
+  const theme = useNavStore((s) => s.theme);
   const simulationStatus = useNavStore((s) => s.simulationStatus);
   const isDriving = simulationStatus === 'playing';
   const isHudIdle = useAutoHideHud(isDriving, 4200);
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden bg-[#0a0a16]">
+    <main
+      className={`relative w-screen h-screen overflow-hidden ${
+        theme === 'light' ? 'bg-[#cbd5e1]' : 'bg-[#0a0a16]'
+      }`}
+    >
       <ViceMap />
       <TrafficAlertOverlay />
 

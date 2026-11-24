@@ -6,14 +6,18 @@ import {
   Crosshair,
   Layers,
   Loader2,
+  Moon,
   RotateCcw,
   RotateCw,
+  Sun,
   X,
 } from 'lucide-react';
 import { useNavStore } from '../../store/useNavStore';
 import { playAlertTone, playUiClick } from '../../utils/audio';
 
 export function MapControls() {
+  const theme = useNavStore((s) => s.theme);
+  const toggleTheme = useNavStore((s) => s.toggleTheme);
   const mapMode = useNavStore((s) => s.mapMode);
   const toggleMapMode = useNavStore((s) => s.toggleMapMode);
   const isLocating = useNavStore((s) => s.isLocating);
@@ -50,6 +54,11 @@ export function MapControls() {
   const handleToggleMode = () => {
     playUiClick();
     toggleMapMode();
+  };
+
+  const handleToggleTheme = () => {
+    playUiClick();
+    toggleTheme();
   };
 
   const handleRecenter = () => {
@@ -132,6 +141,20 @@ export function MapControls() {
             }`}
           />
           <span className="hidden md:inline font-mono">Alert</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleToggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
+          className="vice-glass hover:border-[#ff6b00]/70 active:scale-95 transition-all rounded-xl p-2.5 text-slate-100 cursor-pointer"
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-4 h-4 text-[#ff6b00]" />
+          ) : (
+            <Moon className="w-4 h-4 text-[#00f0ff]" />
+          )}
         </button>
 
         <button

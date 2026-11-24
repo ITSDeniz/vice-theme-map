@@ -2,7 +2,11 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { Feature, LineString } from 'geojson';
 import { useNavStore, MIAMI_DEFAULT_COORDS } from '../../store/useNavStore';
-import { applyViceCityTheme, OPENFREEMAP_DARK_STYLE } from './viceCityStyle';
+import {
+  applyViceCityTheme,
+  OPENFREEMAP_DARK_STYLE,
+  OPENFREEMAP_LIGHT_STYLE,
+} from './viceCityStyle';
 import { reverseGeocode } from '../../services/geocoding';
 import { fetchRoute } from '../../services/routing';
 import { useDriveSimulation } from './useDriveSimulation';
@@ -92,7 +96,9 @@ export function ViceMap() {
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const destMarkerRef = useRef<maplibregl.Marker | null>(null);
   const styleLoadedRef = useRef<boolean>(false);
+  const appliedThemeRef = useRef<string | null>(null);
 
+  const theme = useNavStore((s) => s.theme);
   const mapMode = useNavStore((s) => s.mapMode);
   const userLocation = useNavStore((s) => s.userLocation);
   const origin = useNavStore((s) => s.origin);
@@ -112,10 +118,15 @@ export function ViceMap() {
 
     const initialMode = useNavStore.getState().mapMode;
     const initialLocation = useNavStore.getState().userLocation;
+    const initialTheme = useNavStore.getState().theme;
+    appliedThemeRef.current = initialTheme;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: OPENFREEMAP_DARK_STYLE,
+      style:
+        initialTheme === 'light'
+          ? OPENFREEMAP_LIGHT_STYLE
+          : OPENFREEMAP_DARK_STYLE,
       center: initialLocation ?? MIAMI_DEFAULT_COORDS,
       zoom: 15.2,
       pitch: initialMode === '3D' ? 58 : 0,
@@ -131,7 +142,8 @@ export function ViceMap() {
     mapRef.current = map;
 
     map.on('style.load', () => {
-      applyViceCityTheme(map);
+      const currentTheme = useNavStore.getState().theme;
+      applyViceCityTheme(map, currentTheme);
       ensureRouteLayers(map);
       styleLoadedRef.current = true;
 
@@ -263,6 +275,18 @@ export function ViceMap() {
     };
   }, []);
 
+  // Switch between Vice City Light and Dark styles when theme changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || appliedThemeRef.current === theme) return;
+
+    appliedThemeRef.current = theme;
+    styleLoadedRef.current = false;
+    map.setStyle(
+      theme === 'light' ? OPENFREEMAP_LIGHT_STYLE : OPENFREEMAP_DARK_STYLE
+    );
+  }, [theme]);
+
   // Sync active start marker position (custom origin or user GPS)
   useEffect(() => {
     if (userMarkerRef.current) {
@@ -383,7 +407,7 @@ export function ViceMap() {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div ref={mapContainerRef} className="w-full h-full" />
-      <div className="vice-scanlines absolute inset-0 z-10" />
+      {theme === 'dark' && <div className="vice-scanlines absolute inset-0 z-10" />}
     </div>
   );
 }

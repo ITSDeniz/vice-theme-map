@@ -1,15 +1,23 @@
 import type maplibregl from 'maplibre-gl';
+import type { ThemeMode } from '../../types/nav';
 
 export const OPENFREEMAP_DARK_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+export const OPENFREEMAP_LIGHT_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 /**
- * Programmatically transforms the OpenFreeMap dark vector style into a
- * GTA 6 (Vice City / Leonida) midnight palette and injects a 3D building
- * fill-extrusion layer.
+ * Programmatically transforms OpenFreeMap vector styles into either:
+ * - 'light': GTA 6 Vice City / Leonida daylight satellite-vector look (cool concrete,
+ *   bright Miami turquoise water, lush palm-green parks, white highways, 3D slate buildings)
+ * - 'dark': Vice City midnight neon palette
  */
-export function applyViceCityTheme(map: maplibregl.Map): void {
+export function applyViceCityTheme(
+  map: maplibregl.Map,
+  theme: ThemeMode = 'light'
+): void {
   const style = map.getStyle();
   if (!style || !style.layers) return;
+
+  const isLight = theme === 'light';
 
   const safeSetPaint = (layerId: string, prop: string, value: unknown) => {
     try {
@@ -43,24 +51,40 @@ export function applyViceCityTheme(map: maplibregl.Map): void {
       buildingSourceLayer = layer['source-layer'];
     }
 
-    // 1. Background -> deep midnight indigo
+    // 1. Background
     if (layer.type === 'background') {
-      safeSetPaint(layer.id, 'background-color', '#0a0a16');
+      safeSetPaint(
+        layer.id,
+        'background-color',
+        isLight ? '#cbd5e1' : '#0a0a16'
+      );
       continue;
     }
 
-    // 2. Water -> glowing midnight cyan-blue
+    // 2. Water
     if (id.includes('water')) {
       if (layer.type === 'fill') {
-        safeSetPaint(layer.id, 'fill-color', '#091833');
-        safeSetPaint(layer.id, 'fill-outline-color', '#00f0ff');
+        safeSetPaint(layer.id, 'fill-color', isLight ? '#43badb' : '#091833');
+        safeSetPaint(
+          layer.id,
+          'fill-outline-color',
+          isLight ? '#2ca0c4' : '#00f0ff'
+        );
       } else if (layer.type === 'line') {
-        safeSetPaint(layer.id, 'line-color', '#0e3c66');
+        safeSetPaint(layer.id, 'line-color', isLight ? '#2c9ec2' : '#0e3c66');
       }
       continue;
     }
 
-    // 3. Parks / landcover / landuse -> subtle dark purple-slate
+    // 3. Beaches / sand (light mode coastal detail)
+    if (isLight && (id.includes('sand') || id.includes('beach'))) {
+      if (layer.type === 'fill') {
+        safeSetPaint(layer.id, 'fill-color', '#ede0b6');
+      }
+      continue;
+    }
+
+    // 4. Parks / landcover / landuse
     if (
       id.includes('park') ||
       id.includes('landuse') ||
@@ -70,13 +94,17 @@ export function applyViceCityTheme(map: maplibregl.Map): void {
       id.includes('forest')
     ) {
       if (layer.type === 'fill') {
-        safeSetPaint(layer.id, 'fill-color', '#0e1124');
-        safeSetPaint(layer.id, 'fill-opacity', 0.75);
+        safeSetPaint(
+          layer.id,
+          'fill-color',
+          isLight ? '#72ad69' : '#0e1124'
+        );
+        safeSetPaint(layer.id, 'fill-opacity', isLight ? 0.85 : 0.75);
       }
       continue;
     }
 
-    // 4. Roads -> desaturated dark indigo with subtle magenta-violet highways
+    // 5. Roads
     if (
       layer.type === 'line' &&
       (id.includes('road') ||
@@ -88,40 +116,79 @@ export function applyViceCityTheme(map: maplibregl.Map): void {
         id.includes('tunnel') ||
         id.includes('path'))
     ) {
-      if (id.includes('casing')) {
-        safeSetPaint(layer.id, 'line-color', '#0d091a');
-      } else if (id.includes('motorway') || id.includes('trunk')) {
-        safeSetPaint(layer.id, 'line-color', '#2d1c45');
-      } else if (id.includes('primary') || id.includes('secondary')) {
-        safeSetPaint(layer.id, 'line-color', '#211c3a');
+      if (isLight) {
+        if (id.includes('casing')) {
+          safeSetPaint(layer.id, 'line-color', '#a9b8ca');
+        } else if (
+          id.includes('motorway') ||
+          id.includes('trunk') ||
+          id.includes('primary') ||
+          id.includes('secondary')
+        ) {
+          safeSetPaint(layer.id, 'line-color', '#ffffff');
+        } else {
+          safeSetPaint(layer.id, 'line-color', '#eef3f8');
+        }
       } else {
-        safeSetPaint(layer.id, 'line-color', '#17172e');
+        if (id.includes('casing')) {
+          safeSetPaint(layer.id, 'line-color', '#0d091a');
+        } else if (id.includes('motorway') || id.includes('trunk')) {
+          safeSetPaint(layer.id, 'line-color', '#2d1c45');
+        } else if (id.includes('primary') || id.includes('secondary')) {
+          safeSetPaint(layer.id, 'line-color', '#211c3a');
+        } else {
+          safeSetPaint(layer.id, 'line-color', '#17172e');
+        }
       }
       continue;
     }
 
-    // 5. Flat 2D building footprints -> tone down so 3D extrusion shines
+    // 6. Flat 2D building footprints
     if (id.includes('building') && layer.type === 'fill') {
-      safeSetPaint(layer.id, 'fill-color', '#121226');
-      safeSetPaint(layer.id, 'fill-opacity', 0.45);
+      safeSetPaint(
+        layer.id,
+        'fill-color',
+        isLight ? '#9fb1c8' : '#121226'
+      );
+      safeSetPaint(layer.id, 'fill-opacity', isLight ? 0.5 : 0.45);
       continue;
     }
 
-    // 6. Labels -> crisp neon-tinted cool white with deep midnight halo
+    // 7. Labels
     if (layer.type === 'symbol') {
-      if (id.includes('water')) {
-        safeSetPaint(layer.id, 'text-color', '#38bdf8');
-      } else if (id.includes('place') || id.includes('city') || id.includes('town')) {
-        safeSetPaint(layer.id, 'text-color', '#f8fafc');
+      if (isLight) {
+        if (id.includes('water')) {
+          safeSetPaint(layer.id, 'text-color', '#0e5a78');
+          safeSetPaint(layer.id, 'text-halo-color', '#bce9f7');
+        } else if (
+          id.includes('place') ||
+          id.includes('city') ||
+          id.includes('town') ||
+          id.includes('suburb') ||
+          id.includes('neighbourhood')
+        ) {
+          safeSetPaint(layer.id, 'text-color', '#ffffff');
+          safeSetPaint(layer.id, 'text-halo-color', '#334155');
+        } else {
+          safeSetPaint(layer.id, 'text-color', '#334155');
+          safeSetPaint(layer.id, 'text-halo-color', '#f8fafc');
+        }
+        safeSetPaint(layer.id, 'text-halo-width', 1.6);
       } else {
-        safeSetPaint(layer.id, 'text-color', '#94a3b8');
+        if (id.includes('water')) {
+          safeSetPaint(layer.id, 'text-color', '#38bdf8');
+        } else if (id.includes('place') || id.includes('city') || id.includes('town')) {
+          safeSetPaint(layer.id, 'text-color', '#f8fafc');
+        } else {
+          safeSetPaint(layer.id, 'text-color', '#94a3b8');
+        }
+        safeSetPaint(layer.id, 'text-halo-color', '#0a0a16');
+        safeSetPaint(layer.id, 'text-halo-width', 1.4);
       }
-      safeSetPaint(layer.id, 'text-halo-color', '#0a0a16');
-      safeSetPaint(layer.id, 'text-halo-width', 1.4);
     }
   }
 
-  // 7. Add 3D Vice City Buildings (fill-extrusion)
+  // 8. Add 3D Vice City Buildings (fill-extrusion)
   const extrusionLayerId = 'vice-3d-buildings';
   if (!map.getLayer(extrusionLayerId)) {
     const sourceId = buildingSourceId ?? 'openmaptiles';
@@ -137,21 +204,37 @@ export function applyViceCityTheme(map: maplibregl.Map): void {
           minzoom: 13.5,
           filter: ['!=', ['get', 'hide_3d'], true],
           paint: {
-            'fill-extrusion-color': [
-              'interpolate',
-              ['linear'],
-              ['coalesce', ['get', 'render_height'], ['get', 'height'], 12],
-              0,
-              '#131329',
-              25,
-              '#1b1738',
-              60,
-              '#271c4a',
-              120,
-              '#3b1d5e',
-              200,
-              '#4c1d6e',
-            ],
+            'fill-extrusion-color': isLight
+              ? [
+                  'interpolate',
+                  ['linear'],
+                  ['coalesce', ['get', 'render_height'], ['get', 'height'], 12],
+                  0,
+                  '#b2c1d4',
+                  25,
+                  '#9db0c7',
+                  60,
+                  '#899eb8',
+                  120,
+                  '#758ba8',
+                  200,
+                  '#617896',
+                ]
+              : [
+                  'interpolate',
+                  ['linear'],
+                  ['coalesce', ['get', 'render_height'], ['get', 'height'], 12],
+                  0,
+                  '#131329',
+                  25,
+                  '#1b1738',
+                  60,
+                  '#271c4a',
+                  120,
+                  '#3b1d5e',
+                  200,
+                  '#4c1d6e',
+                ],
             'fill-extrusion-height': [
               'interpolate',
               ['linear'],
@@ -167,7 +250,7 @@ export function applyViceCityTheme(map: maplibregl.Map): void {
               ['get', 'min_height'],
               0,
             ],
-            'fill-extrusion-opacity': 0.88,
+            'fill-extrusion-opacity': isLight ? 0.9 : 0.88,
           },
         },
         firstSymbolLayerId
@@ -175,15 +258,24 @@ export function applyViceCityTheme(map: maplibregl.Map): void {
     }
   }
 
-  // 8. Subtle neon atmospheric lighting for 3D buildings
+  // 9. Atmospheric lighting for 3D buildings
   try {
-    map.setLight({
-      anchor: 'viewport',
-      color: '#ff66b2',
-      intensity: 0.35,
-      position: [1.2, 210, 35],
-    });
+    map.setLight(
+      isLight
+        ? {
+            anchor: 'viewport',
+            color: '#fff8ed',
+            intensity: 0.45,
+            position: [1.2, 210, 40],
+          }
+        : {
+            anchor: 'viewport',
+            color: '#ff66b2',
+            intensity: 0.35,
+            position: [1.2, 210, 35],
+          }
+    );
   } catch {
-    // Some MapLibre versions may handle light differently
+    // Ignore light errors on unsupported styles
   }
 }

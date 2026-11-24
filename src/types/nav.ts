@@ -4,6 +4,8 @@ export type LngLatTuple = [number, number]; // [lng, lat]
 
 export type MapMode = '2D' | '3D';
 
+export type ThemeMode = 'light' | 'dark';
+
 export type SimulationStatus = 'idle' | 'playing' | 'paused' | 'completed';
 
 export interface Destination {

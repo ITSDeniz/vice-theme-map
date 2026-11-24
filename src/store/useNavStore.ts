@@ -5,12 +5,25 @@ import type {
   MapMode,
   RouteData,
   SimulationStatus,
+  ThemeMode,
   UIAlert,
 } from '../types/nav';
 
 export const MIAMI_DEFAULT_COORDS: LngLatTuple = [-80.1918, 25.7617];
 
+function getInitialTheme(): ThemeMode {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  ) {
+    return 'dark';
+  }
+  return 'light';
+}
+
 interface NavState {
+  theme: ThemeMode;
   mapMode: MapMode;
   userLocation: LngLatTuple;
   isLocating: boolean;
@@ -34,6 +47,8 @@ interface NavState {
   uiAlert: UIAlert | null;
 
   // Actions
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
   setMapMode: (mode: MapMode) => void;
   toggleMapMode: () => void;
   setUserLocation: (coords: LngLatTuple) => void;
@@ -65,6 +80,7 @@ interface NavState {
 }
 
 export const useNavStore = create<NavState>((set) => ({
+  theme: getInitialTheme(),
   mapMode: '3D',
   userLocation: MIAMI_DEFAULT_COORDS,
   isLocating: false,
@@ -87,6 +103,9 @@ export const useNavStore = create<NavState>((set) => ({
   trafficAlertActive: false,
   uiAlert: null,
 
+  setTheme: (theme) => set({ theme }),
+  toggleTheme: () =>
+    set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
   setMapMode: (mapMode) => set({ mapMode }),
   toggleMapMode: () =>
     set((state) => ({ mapMode: state.mapMode === '3D' ? '2D' : '3D' })),
