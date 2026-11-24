@@ -2,8 +2,8 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 @theme {
-  --font-display: "Chakra Petch", sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Barlow Condensed", sans-serif;
+  --font-sans: "Barlow", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 

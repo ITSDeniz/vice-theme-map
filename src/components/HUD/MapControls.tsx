@@ -205,10 +205,10 @@ export function MapControls() {
 
       {/* Minimal Editorial Wordmark */}
       <div className="hud-surface rounded-xl px-3 py-2 hidden lg:flex items-baseline gap-1.5">
-        <span className="font-[var(--font-display)] text-xs font-bold tracking-[0.2em] uppercase">
+        <span className="font-[var(--font-display)] text-sm font-bold tracking-[0.16em] uppercase">
           VICE
         </span>
-        <span className="text-[10px] font-mono tracking-wider uppercase text-[var(--hud-text-muted)]">
+        <span className="font-[var(--font-display)] text-xs font-medium tracking-[0.12em] uppercase text-[var(--hud-text-muted)]">
           NAV
         </span>
       </div>

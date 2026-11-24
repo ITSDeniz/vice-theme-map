@@ -124,8 +124,8 @@ export function IFruitRadio() {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--hud-text-muted)]">
-            iFruit
+          <span className="font-[var(--font-display)] text-[11px] font-semibold uppercase tracking-wider text-[var(--hud-text-muted)]">
+            iFruit Radio
           </span>
           <canvas
             ref={canvasRef}
