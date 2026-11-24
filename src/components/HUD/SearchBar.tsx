@@ -22,6 +22,7 @@ import {
 } from '../../services/geocoding';
 import { fetchRoute } from '../../services/routing';
 import { formatDistance, formatDuration, formatEtaClock } from '../../utils/format';
+import { playNavChime, playUiClick } from '../../utils/audio';
 
 type ActiveField = 'origin' | 'destination' | null;
 
@@ -128,7 +129,10 @@ export function SearchBar() {
       const routeData = await fetchRoute(startCoords, endCoords);
       setRoute(routeData);
       if (autoStartDemo) {
+        playNavChime();
         setSimulationStatus('playing');
+      } else {
+        playUiClick();
       }
       return true;
     } catch (err) {
@@ -518,7 +522,10 @@ export function SearchBar() {
                   {simulationStatus === 'idle' ? (
                     <button
                       type="button"
-                      onClick={() => setSimulationStatus('playing')}
+                      onClick={() => {
+                        playNavChime();
+                        setSimulationStatus('playing');
+                      }}
                       className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#ff007f] via-[#ff2a85] to-[#ff6b00] hover:brightness-110 active:scale-[0.98] text-xs font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(255,0,127,0.45)] transition-all cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />

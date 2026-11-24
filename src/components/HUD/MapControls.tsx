@@ -1,7 +1,15 @@
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Compass, Crosshair, Layers, Loader2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Compass,
+  Crosshair,
+  Layers,
+  Loader2,
+  X,
+} from 'lucide-react';
 import { useNavStore } from '../../store/useNavStore';
+import { playAlertTone, playUiClick } from '../../utils/audio';
 
 export function MapControls() {
   const mapMode = useNavStore((s) => s.mapMode);
@@ -10,9 +18,31 @@ export function MapControls() {
   const setIsLocating = useNavStore((s) => s.setIsLocating);
   const setUserLocation = useNavStore((s) => s.setUserLocation);
   const triggerCameraRecenter = useNavStore((s) => s.triggerCameraRecenter);
+  const trafficAlertActive = useNavStore((s) => s.trafficAlertActive);
+  const toggleTrafficAlert = useNavStore((s) => s.toggleTrafficAlert);
   const showAlert = useNavStore((s) => s.showAlert);
 
+  const handleToggleMode = () => {
+    playUiClick();
+    toggleMapMode();
+  };
+
+  const handleRecenter = () => {
+    playUiClick();
+    triggerCameraRecenter();
+  };
+
+  const handleToggleTraffic = () => {
+    if (!trafficAlertActive) {
+      playAlertTone();
+    } else {
+      playUiClick();
+    }
+    toggleTrafficAlert();
+  };
+
   const handleLocateMe = () => {
+    playUiClick();
     if (!('geolocation' in navigator)) {
       showAlert('error', 'Geolocation is not supported by your browser.');
       return;
@@ -62,7 +92,26 @@ export function MapControls() {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={toggleMapMode}
+          onClick={handleToggleTraffic}
+          aria-label="Toggle Traffic Alert Simulation"
+          title="Simulate High Traffic / Alert"
+          className={`active:scale-95 transition-all rounded-xl px-2.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-wider cursor-pointer ${
+            trafficAlertActive
+              ? 'bg-rose-500/25 border border-rose-500/70 text-rose-200 shadow-[0_0_16px_rgba(244,63,94,0.4)]'
+              : 'vice-glass hover:border-rose-400/60 text-slate-200'
+          }`}
+        >
+          <AlertTriangle
+            className={`w-4 h-4 ${
+              trafficAlertActive ? 'text-rose-400 animate-pulse' : 'text-[#ff6b00]'
+            }`}
+          />
+          <span className="hidden md:inline font-mono">Alert</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleToggleMode}
           aria-label={`Switch to ${mapMode === '3D' ? '2D' : '3D'} view`}
           className="vice-glass-cyan hover:border-[#00f0ff]/70 active:scale-95 transition-all rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-100 cursor-pointer"
         >
@@ -87,7 +136,7 @@ export function MapControls() {
 
         <button
           type="button"
-          onClick={triggerCameraRecenter}
+          onClick={handleRecenter}
           aria-label="Recenter camera"
           title="Recenter on active position"
           className="vice-glass hover:border-[#00f0ff]/60 active:scale-95 transition-all rounded-xl p-2.5 text-slate-200 cursor-pointer"
