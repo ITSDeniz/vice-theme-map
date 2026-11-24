@@ -6,6 +6,7 @@ import {
   Pause,
   Play,
   Shuffle,
+  SkipBack,
   SkipForward,
   Volume2,
   VolumeX,
@@ -56,6 +57,7 @@ interface YTPlayer {
   playVideo: () => void;
   pauseVideo: () => void;
   nextVideo: () => void;
+  previousVideo: () => void;
   playVideoAt: (index: number) => void;
   setShuffle: (shufflePlaylist: boolean) => void;
   mute: () => void;
@@ -361,6 +363,37 @@ export function IFruitRadio() {
     switchStation(next);
   };
 
+  const handlePrevTrack = () => {
+    playUiClick();
+    const player = playerRef.current;
+    if (!player || !playerReadyRef.current) return;
+
+    wantPlayRef.current = true;
+    setIsBuffering(true);
+
+    const ytPlaylist = player.getPlaylist?.();
+    if (ytPlaylist && ytPlaylist.length > 1) {
+      player.previousVideo();
+      return;
+    }
+
+    const curr = stationRef.current;
+    if (curr.tracks.length > 1) {
+      const prevIdx =
+        (trackIndexRef.current - 1 + curr.tracks.length) % curr.tracks.length;
+      trackIndexRef.current = prevIdx;
+      setTrackTitle('');
+      player.loadVideoById(curr.tracks[prevIdx]);
+      player.playVideo();
+      return;
+    }
+
+    const currentTime = player.getCurrentTime?.() ?? 0;
+    player.seekTo(Math.max(0, currentTime - 210), true);
+    player.playVideo();
+    setIsBuffering(false);
+  };
+
   const handleSkipTrack = () => {
     playUiClick();
     const player = playerRef.current;
@@ -449,7 +482,7 @@ export function IFruitRadio() {
         aria-hidden="true"
       />
 
-      <div className="hud-surface rounded-xl px-3 py-2 flex items-center gap-2.5 w-[294px] sm:w-[324px]">
+      <div className="hud-surface rounded-xl px-3 py-2 flex items-center gap-2.5 w-[312px] sm:w-[344px]">
         <button
           type="button"
           onClick={handleTogglePlay}
@@ -509,9 +542,18 @@ export function IFruitRadio() {
           </button>
           <button
             type="button"
+            onClick={handlePrevTrack}
+            aria-label="Previous track"
+            title="Previous song"
+            className="p-1 rounded-md text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)] transition-colors cursor-pointer"
+          >
+            <SkipBack className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
             onClick={handleSkipTrack}
             aria-label="Next track"
-            title="Skip song / segment"
+            title="Next song"
             className="p-1 rounded-md text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)] transition-colors cursor-pointer"
           >
             <SkipForward className="w-3.5 h-3.5" />
