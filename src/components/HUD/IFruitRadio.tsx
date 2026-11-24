@@ -114,6 +114,43 @@ interface StationSlot {
   ready: boolean;
   trackIdx: number;
   errorStreak: number;
+  shuffleQueue: number[];
+  shuffleCursor: number;
+  history: number[];
+}
+
+function buildShuffledIndices(count: number, excludeIndex?: number): number[] {
+  const arr = Array.from({ length: count }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  if (
+    excludeIndex !== undefined &&
+    arr.length > 1 &&
+    arr[0] === excludeIndex
+  ) {
+    const swapIdx = 1 + Math.floor(Math.random() * (arr.length - 1));
+    [arr[0], arr[swapIdx]] = [arr[swapIdx], arr[0]];
+  }
+  return arr;
+}
+
+function nextFromShuffleBag(
+  slot: StationSlot,
+  total: number,
+  currentIndex: number
+): number {
+  if (
+    slot.shuffleQueue.length !== total ||
+    slot.shuffleCursor >= slot.shuffleQueue.length
+  ) {
+    slot.shuffleQueue = buildShuffledIndices(total, currentIndex);
+    slot.shuffleCursor = 0;
+  }
+  const next = slot.shuffleQueue[slot.shuffleCursor];
+  slot.shuffleCursor += 1;
+  return next;
 }
 
 export function IFruitRadio() {
@@ -159,6 +196,9 @@ export function IFruitRadio() {
           ready: false,
           trackIdx: 0,
           errorStreak: 0,
+          shuffleQueue: [],
+          shuffleCursor: 0,
+          history: [],
         };
         slotsRef.current[st.id] = slot;
 
@@ -214,8 +254,9 @@ export function IFruitRadio() {
                   setIsBuffering(false);
                 }
               } else if (code === 0 && !usePlaylist && st.tracks.length > 1) {
+                slot.history.push(slot.trackIdx);
                 const nextIdx = shuffleRef.current
-                  ? Math.floor(Math.random() * st.tracks.length)
+                  ? nextFromShuffleBag(slot, st.tracks.length, slot.trackIdx)
                   : (slot.trackIdx + 1) % st.tracks.length;
                 slot.trackIdx = nextIdx;
                 player.loadVideoById(st.tracks[nextIdx]);
@@ -395,13 +436,20 @@ export function IFruitRadio() {
 
     const ytPlaylist = slot.player.getPlaylist?.();
     if (ytPlaylist && ytPlaylist.length > 1) {
-      slot.player.previousVideo();
+      if (isShuffle && slot.history.length > 0) {
+        const prevIdx = slot.history.pop()!;
+        slot.player.playVideoAt(prevIdx);
+      } else {
+        slot.player.previousVideo();
+      }
       return;
     }
 
     if (station.tracks.length > 1) {
       const prevIdx =
-        (slot.trackIdx - 1 + station.tracks.length) % station.tracks.length;
+        isShuffle && slot.history.length > 0
+          ? slot.history.pop()!
+          : (slot.trackIdx - 1 + station.tracks.length) % station.tracks.length;
       slot.trackIdx = prevIdx;
       setTrackTitle('');
       slot.player.loadVideoById(station.tracks[prevIdx]);
@@ -425,13 +473,11 @@ export function IFruitRadio() {
 
     const ytPlaylist = slot.player.getPlaylist?.();
     if (ytPlaylist && ytPlaylist.length > 1) {
+      const currentIdx = slot.player.getPlaylistIndex?.() ?? 0;
       if (isShuffle) {
-        const currentIdx = slot.player.getPlaylistIndex?.() ?? 0;
-        let randIdx = Math.floor(Math.random() * ytPlaylist.length);
-        if (randIdx === currentIdx) {
-          randIdx = (currentIdx + 1) % ytPlaylist.length;
-        }
-        slot.player.playVideoAt(randIdx);
+        slot.history.push(currentIdx);
+        const nextIdx = nextFromShuffleBag(slot, ytPlaylist.length, currentIdx);
+        slot.player.playVideoAt(nextIdx);
       } else {
         slot.player.nextVideo();
       }
@@ -439,13 +485,10 @@ export function IFruitRadio() {
     }
 
     if (station.tracks.length > 1) {
-      let nextIdx = (slot.trackIdx + 1) % station.tracks.length;
-      if (isShuffle) {
-        nextIdx = Math.floor(Math.random() * station.tracks.length);
-        if (nextIdx === slot.trackIdx) {
-          nextIdx = (slot.trackIdx + 1) % station.tracks.length;
-        }
-      }
+      slot.history.push(slot.trackIdx);
+      const nextIdx = isShuffle
+        ? nextFromShuffleBag(slot, station.tracks.length, slot.trackIdx)
+        : (slot.trackIdx + 1) % station.tracks.length;
       slot.trackIdx = nextIdx;
       setTrackTitle('');
       slot.player.loadVideoById(station.tracks[nextIdx]);
@@ -474,6 +517,8 @@ export function IFruitRadio() {
     shuffleRef.current = nextShuffle;
 
     Object.values(slotsRef.current).forEach((slot) => {
+      slot.shuffleQueue = [];
+      slot.shuffleCursor = 0;
       if (slot.player && slot.ready) {
         slot.player.setShuffle?.(nextShuffle);
       }
