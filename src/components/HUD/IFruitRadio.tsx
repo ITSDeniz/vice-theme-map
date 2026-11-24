@@ -186,6 +186,7 @@ export function IFruitRadio() {
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
+          origin: window.location.origin,
           ...(usePlaylist
             ? { listType: 'playlist', list: targetStation.playlistId! }
             : {}),
@@ -236,6 +237,20 @@ export function IFruitRadio() {
           onError: () => {
             if (epoch !== mountEpochRef.current) return;
             errorStreakRef.current += 1;
+
+            // If the full YouTube playlist IS loaded and just one song is embed-restricted
+            // (error 101/150), skip to the next song in the playlist instead of leaving it.
+            const ytPlaylist = player.getPlaylist?.();
+            if (ytPlaylist && ytPlaylist.length > 1) {
+              if (errorStreakRef.current > Math.min(10, ytPlaylist.length)) {
+                setIsBuffering(false);
+                setIsPlaying(false);
+                return;
+              }
+              player.nextVideo();
+              return;
+            }
+
             if (errorStreakRef.current > targetStation.tracks.length) {
               setIsBuffering(false);
               setIsPlaying(false);
