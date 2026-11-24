@@ -163,8 +163,25 @@ export function applyViceCityTheme(
       continue;
     }
 
-    // 7. Labels
+    // 7. Labels (hide noisy POI / transit / parking / highway shield icons in light mode)
     if (layer.type === 'symbol') {
+      if (
+        isLight &&
+        (id.includes('poi') ||
+          id.includes('shield') ||
+          id.includes('transit') ||
+          id.includes('airport') ||
+          id.includes('aerodrome') ||
+          id.includes('housenumber'))
+      ) {
+        try {
+          map.setLayoutProperty(layer.id, 'visibility', 'none');
+        } catch {
+          // ignore
+        }
+        continue;
+      }
+
       if (isLight) {
         if (id.includes('water')) {
           safeSetPaint(layer.id, 'text-color', '#0e5a78');
