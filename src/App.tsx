@@ -40,7 +40,7 @@ export default function App() {
         <MapControls />
         <div
           className={`fixed right-3 sm:right-4 z-30 transition-all ${
-            simulationStatus !== 'idle' ? 'bottom-28 sm:bottom-7' : 'bottom-7'
+            simulationStatus !== 'idle' ? 'bottom-28 sm:bottom-10' : 'bottom-10'
           }`}
         >
           <IFruitRadio />
