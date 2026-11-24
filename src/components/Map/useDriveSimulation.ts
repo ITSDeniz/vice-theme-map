@@ -112,13 +112,20 @@ function setVehiclePoint(
   coords: [number, number] | null,
   bearing = 0
 ): void {
-  const src = map.getSource(VEHICLE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-  if (!src) return;
-
   if (!coords) {
-    src.setData(EMPTY_VEHICLE_FC);
+    const src = map.getSource(VEHICLE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+    if (src) src.setData(EMPTY_VEHICLE_FC);
     return;
   }
+
+  // Re-attach WebGL vehicle sprite/layers if map.setStyle() wiped them (e.g. theme switch)
+  if (!map.getSource(VEHICLE_SOURCE_ID) || !map.getLayer(VEHICLE_ARROW_LAYER_ID)) {
+    if (!map.isStyleLoaded()) return;
+    ensureVehicleLayers(map);
+  }
+
+  const src = map.getSource(VEHICLE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (!src) return;
 
   src.setData({
     type: 'FeatureCollection',
@@ -201,6 +208,16 @@ export function useDriveSimulation(
   useEffect(() => {
     const map = mapRef.current;
     const sim = simRef.current;
+
+    // Re-draw paused/completed vehicle marker if theme style reloads
+    const handleStyleLoad = () => {
+      const state = useNavStore.getState();
+      if (state.route && (state.simulationStatus === 'paused' || state.simulationStatus === 'completed')) {
+        const pt = along(state.route.geometry, sim.distanceTraveledKm, { units: 'kilometers' });
+        setVehiclePoint(map!, pt.geometry.coordinates as [number, number], sim.vehicleBearing);
+      }
+    };
+    map?.on('style.load', handleStyleLoad);
 
     const stopLoop = () => {
       if (sim.rafId !== null) {
@@ -427,6 +444,7 @@ export function useDriveSimulation(
     sim.rafId = requestAnimationFrame(tick);
 
     return () => {
+      map?.off('style.load', handleStyleLoad);
       stopLoop();
     };
   }, [simulationStatus, route, mapRef, userMarkerRef]);
