@@ -143,6 +143,8 @@ export function IFruitRadio() {
   const shuffleRef = useRef(false);
   const trackIndexRef = useRef(0);
   const errorStreakRef = useRef(0);
+  const prevVideoIdRef = useRef('');
+  const isSwitchingStationRef = useRef(false);
   const stationRef = useRef<YouTubeRadioStation>(RADIO_STATIONS[0]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -192,10 +194,19 @@ export function IFruitRadio() {
             const code = event.data;
             // 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 0 = ENDED
             if (code === 1) {
+              const videoData = playerRef.current?.getVideoData();
+              if (
+                isSwitchingStationRef.current &&
+                videoData?.video_id &&
+                videoData.video_id === prevVideoIdRef.current
+              ) {
+                return;
+              }
+              isSwitchingStationRef.current = false;
               errorStreakRef.current = 0;
               setIsPlaying(true);
               setIsBuffering(false);
-              const title = playerRef.current?.getVideoData()?.title?.trim();
+              const title = videoData?.title?.trim();
               if (title) setTrackTitle(title);
             } else if (code === 3) {
               setIsBuffering(true);
@@ -293,6 +304,8 @@ export function IFruitRadio() {
 
   const switchStation = (nextIndex: number) => {
     const nextStation = RADIO_STATIONS[nextIndex];
+    prevVideoIdRef.current = playerRef.current?.getVideoData()?.video_id ?? '';
+    isSwitchingStationRef.current = true;
     errorStreakRef.current = 0;
     stationRef.current = nextStation;
     setStationIndex(nextIndex);
