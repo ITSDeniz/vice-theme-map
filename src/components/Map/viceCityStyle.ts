@@ -143,14 +143,23 @@ export function applyViceCityTheme(
       continue;
     }
 
-    // 6. Flat 2D building footprints
+    // 6. Flat 2D building footprints & hide any pre-existing 3D building layer so ours is authoritative
+    if (id.includes('building') && layer.type === 'fill-extrusion' && layer.id !== 'vice-3d-buildings') {
+      try {
+        map.setLayoutProperty(layer.id, 'visibility', 'none');
+      } catch {
+        // ignore
+      }
+      continue;
+    }
+
     if (id.includes('building') && layer.type === 'fill') {
       safeSetPaint(
         layer.id,
         'fill-color',
-        isLight ? '#9fb1c8' : '#121226'
+        isLight ? '#cfdbe8' : '#121226'
       );
-      safeSetPaint(layer.id, 'fill-opacity', isLight ? 0.5 : 0.45);
+      safeSetPaint(layer.id, 'fill-opacity', isLight ? 0.55 : 0.45);
       continue;
     }
 
@@ -210,15 +219,15 @@ export function applyViceCityTheme(
                   ['linear'],
                   ['coalesce', ['get', 'render_height'], ['get', 'height'], 12],
                   0,
-                  '#c4d5e8',
-                  25,
-                  '#a8c5e3',
-                  60,
-                  '#85b5e6',
-                  120,
-                  '#5ca1e6',
-                  200,
-                  '#388fe6',
+                  '#dde6f0',
+                  15,
+                  '#b6d3f2',
+                  40,
+                  '#7eb8f2',
+                  90,
+                  '#4798eb',
+                  160,
+                  '#1d78db',
                 ]
               : [
                   'interpolate',
