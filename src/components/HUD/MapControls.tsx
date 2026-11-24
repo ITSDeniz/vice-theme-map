@@ -89,14 +89,14 @@ export function MapControls() {
         setUserLocation(coords);
         triggerCameraRecenter();
         setIsLocating(false);
-        showAlert('info', 'GPS lock acquired. Centered on your position.');
+        showAlert('info', 'Centered on your current location.');
       },
       (err) => {
         setIsLocating(false);
         if (err.code === err.PERMISSION_DENIED) {
-          showAlert('warning', 'Location permission denied. Staying in Vice City (Miami).');
+          showAlert('warning', 'Location permission denied. Staying in Miami.');
         } else {
-          showAlert('warning', 'Unable to determine GPS position. Staying in Vice City.');
+          showAlert('warning', 'Unable to get GPS position. Staying in Miami.');
         }
         triggerCameraRecenter();
       },
@@ -104,56 +104,36 @@ export function MapControls() {
     );
   };
 
-  return (
-    <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-30 flex sm:flex-col items-center sm:items-end gap-2 sm:gap-2.5">
-      {/* Vice Nav Identity Pill */}
-      <div className="vice-glass rounded-xl px-3 py-2 flex items-center gap-2">
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff007f] opacity-75" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ff007f]" />
-        </span>
-        <div className="leading-none">
-          <span className="font-[var(--font-display)] text-xs sm:text-sm font-bold tracking-widest uppercase bg-gradient-to-r from-[#ff007f] via-[#ff6b00] to-[#00f0ff] bg-clip-text text-transparent">
-            VICE NAV
-          </span>
-          <span className="ml-2 text-[10px] font-mono tracking-wider text-slate-400 uppercase hidden lg:inline">
-            LEONIDA OS
-          </span>
-        </div>
-      </div>
+  const btnBase =
+    'px-2.5 py-2 flex items-center justify-center gap-1.5 text-xs font-medium transition-colors hover:bg-[var(--hud-hover)] active:opacity-75 cursor-pointer';
 
-      {/* Control Buttons */}
-      <div className="flex items-center gap-2">
+  return (
+    <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-2">
+      {/* Unified Segmented Control Rail */}
+      <div className="hud-surface rounded-xl flex items-center divide-x divide-[var(--hud-divider)] overflow-hidden">
         <button
           type="button"
           onClick={handleToggleTraffic}
-          aria-label="Toggle Traffic Alert Simulation"
-          title="Simulate High Traffic / Alert"
-          className={`active:scale-95 transition-all rounded-xl px-2.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-wider cursor-pointer ${
-            trafficAlertActive
-              ? 'bg-rose-500/25 border border-rose-500/70 text-rose-200 shadow-[0_0_16px_rgba(244,63,94,0.4)]'
-              : 'vice-glass hover:border-rose-400/60 text-slate-200'
+          aria-label="Toggle traffic alert simulation"
+          title="Simulate traffic delay"
+          className={`${btnBase} ${
+            trafficAlertActive ? 'bg-rose-500/15 text-rose-500' : ''
           }`}
         >
-          <AlertTriangle
-            className={`w-4 h-4 ${
-              trafficAlertActive ? 'text-rose-400 animate-pulse' : 'text-[#ff6b00]'
-            }`}
-          />
-          <span className="hidden md:inline font-mono">Alert</span>
+          <AlertTriangle className="w-4 h-4" />
         </button>
 
         <button
           type="button"
           onClick={handleToggleTheme}
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
-          className="vice-glass hover:border-[#ff6b00]/70 active:scale-95 transition-all rounded-xl p-2.5 text-slate-100 cursor-pointer"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+          className={btnBase}
         >
           {theme === 'dark' ? (
-            <Sun className="w-4 h-4 text-[#ff6b00]" />
+            <Sun className="w-4 h-4" />
           ) : (
-            <Moon className="w-4 h-4 text-[#00f0ff]" />
+            <Moon className="w-4 h-4" />
           )}
         </button>
 
@@ -161,10 +141,11 @@ export function MapControls() {
           type="button"
           onClick={handleToggleMode}
           aria-label={`Switch to ${mapMode === '3D' ? '2D' : '3D'} view`}
-          className="vice-glass-cyan hover:border-[#00f0ff]/70 active:scale-95 transition-all rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-100 cursor-pointer"
+          title="Toggle 3D buildings"
+          className={btnBase}
         >
-          <Layers className="w-4 h-4 text-[#00f0ff]" />
-          <span className="font-mono">{mapMode}</span>
+          <Layers className="w-4 h-4" />
+          <span className="font-mono text-[11px] font-semibold">{mapMode}</span>
         </button>
 
         <button
@@ -172,14 +153,14 @@ export function MapControls() {
           onClick={handleLocateMe}
           disabled={isLocating}
           aria-label="Locate Me"
-          className="vice-glass hover:border-[#ff007f]/70 active:scale-95 transition-all rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-100 cursor-pointer disabled:opacity-60"
+          title="Center on my GPS location"
+          className={`${btnBase} disabled:opacity-50`}
         >
           {isLocating ? (
-            <Loader2 className="w-4 h-4 text-[#ff007f] animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Crosshair className="w-4 h-4 text-[#ff007f]" />
+            <Crosshair className="w-4 h-4" />
           )}
-          <span className="hidden sm:inline">Locate Me</span>
         </button>
 
         <button
@@ -189,10 +170,10 @@ export function MapControls() {
           onPointerLeave={stopHoldRotate}
           onPointerCancel={stopHoldRotate}
           aria-label="Rotate map left"
-          title="Rotate left 45° (hold for 360°)"
-          className="vice-glass hover:border-[#00f0ff]/60 active:scale-95 transition-all rounded-xl p-2.5 text-slate-200 cursor-pointer"
+          title="Rotate left (hold for 360°)"
+          className={`${btnBase} hidden sm:flex`}
         >
-          <RotateCcw className="w-4 h-4 text-[#00f0ff]" />
+          <RotateCcw className="w-3.5 h-3.5" />
         </button>
 
         <button
@@ -202,21 +183,34 @@ export function MapControls() {
           onPointerLeave={stopHoldRotate}
           onPointerCancel={stopHoldRotate}
           aria-label="Rotate map right"
-          title="Rotate right 45° (hold for 360°)"
-          className="vice-glass hover:border-[#00f0ff]/60 active:scale-95 transition-all rounded-xl p-2.5 text-slate-200 cursor-pointer"
+          title="Rotate right (hold for 360°)"
+          className={`${btnBase} hidden sm:flex`}
         >
-          <RotateCw className="w-4 h-4 text-[#00f0ff]" />
+          <RotateCw className="w-3.5 h-3.5" />
         </button>
 
         <button
           type="button"
           onClick={handleRecenter}
-          aria-label="Recenter camera"
-          title="Recenter on active position"
-          className="vice-glass hover:border-[#00f0ff]/60 active:scale-95 transition-all rounded-xl p-2.5 text-slate-200 cursor-pointer"
+          aria-label="Reset north and recenter"
+          title="Reset camera & bearing"
+          className={btnBase}
         >
-          <Compass className="w-4 h-4 text-[#00f0ff]" />
+          <Compass
+            className="w-4 h-4"
+            style={{ transform: 'rotate(var(--map-bearing, 0deg))' }}
+          />
         </button>
+      </div>
+
+      {/* Minimal Editorial Wordmark */}
+      <div className="hud-surface rounded-xl px-3 py-2 hidden lg:flex items-baseline gap-1.5">
+        <span className="font-[var(--font-display)] text-xs font-bold tracking-[0.2em] uppercase">
+          VICE
+        </span>
+        <span className="text-[10px] font-mono tracking-wider uppercase text-[var(--hud-text-muted)]">
+          NAV
+        </span>
       </div>
     </div>
   );
@@ -234,30 +228,31 @@ export function AlertToast() {
     return () => window.clearTimeout(timer);
   }, [uiAlert, clearAlert]);
 
-  const borderClass =
+  const indicatorColor =
     uiAlert?.type === 'error'
-      ? 'border-rose-500/60 text-rose-200'
+      ? 'bg-rose-500'
       : uiAlert?.type === 'warning'
-        ? 'border-[#ff6b00]/60 text-amber-100'
-        : 'border-[#00f0ff]/50 text-cyan-100';
+        ? 'bg-amber-500'
+        : 'bg-sky-500';
 
   return (
     <AnimatePresence>
       {uiAlert && (
         <motion.div
           key={uiAlert.id}
-          initial={{ opacity: 0, y: -16, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -12, scale: 0.96 }}
-          transition={{ duration: 0.22 }}
-          className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-[90vw] sm:max-w-md px-4 py-2.5 rounded-xl bg-slate-950/85 backdrop-blur-md border shadow-2xl flex items-center gap-3 text-xs sm:text-sm ${borderClass}`}
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-[90vw] sm:max-w-md px-3.5 py-2.5 rounded-xl hud-surface-elevated flex items-center gap-2.5 text-xs sm:text-sm"
         >
+          <span className={`w-2 h-2 rounded-full shrink-0 ${indicatorColor}`} />
           <span className="flex-1 leading-snug">{uiAlert.message}</span>
           <button
             type="button"
             onClick={clearAlert}
             aria-label="Dismiss notification"
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

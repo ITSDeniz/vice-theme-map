@@ -13,7 +13,6 @@ export function TrafficAlertOverlay() {
     <AnimatePresence>
       {trafficAlertActive && (
         <>
-          {/* Non-intrusive red/blue police/traffic neon edge glow */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -23,22 +22,17 @@ export function TrafficAlertOverlay() {
             aria-hidden="true"
           />
 
-          {/* High Traffic / Rerouting Banner */}
           <motion.div
-            initial={{ opacity: 0, y: -14 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -14 }}
-            transition={{ duration: 0.22 }}
-            className={`fixed left-1/2 -translate-x-1/2 z-30 pointer-events-none px-4 py-2 rounded-xl bg-slate-950/85 backdrop-blur-md border border-rose-500/60 shadow-[0_0_24px_rgba(244,63,94,0.35)] flex items-center gap-2.5 ${
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed left-1/2 -translate-x-1/2 z-30 pointer-events-none px-3.5 py-2 rounded-xl hud-surface-elevated border-rose-500/40 flex items-center gap-2 text-xs font-medium ${
               isDrivingBannerVisible ? 'top-28 sm:top-32' : 'top-5'
             }`}
           >
-            <AlertTriangle className="w-4 h-4 text-rose-400 animate-pulse shrink-0" />
-            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider">
-              <span className="text-rose-300 font-bold">High Traffic</span>
-              <span className="text-slate-500">//</span>
-              <span className="text-[#00f0ff]">Rerouting Speed</span>
-            </div>
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            <span>Traffic delay detected — adjusting speed</span>
           </motion.div>
         </>
       )}

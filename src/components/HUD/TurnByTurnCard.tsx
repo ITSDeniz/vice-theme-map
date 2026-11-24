@@ -18,10 +18,10 @@ function ManeuverIcon({
   type: string;
   modifier?: string;
 }) {
-  const cls = 'w-7 h-7 text-[#00f0ff] drop-shadow-[0_0_8px_rgba(0,240,255,0.75)]';
+  const cls = 'w-6 h-6';
 
   if (type === 'arrive') {
-    return <Flag className="w-7 h-7 text-[#ff007f] drop-shadow-[0_0_8px_rgba(255,0,127,0.8)]" />;
+    return <Flag className="w-6 h-6 text-[var(--accent-pink)]" />;
   }
   if (type === 'roundabout' || type === 'rotary') {
     return <RotateCw className={cls} />;
@@ -55,15 +55,15 @@ export function TurnByTurnCard() {
     <AnimatePresence>
       {isVisible && activeStep && (
         <motion.div
-          initial={{ opacity: 0, y: -20, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.96 }}
-          transition={{ duration: 0.28 }}
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          transition={{ duration: 0.24 }}
           className="fixed top-16 sm:top-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-1.5rem)] sm:w-auto sm:min-w-[330px] max-w-md pointer-events-auto"
         >
-          <div className="vice-glass-cyan rounded-2xl p-3.5 shadow-[0_0_32px_rgba(0,240,255,0.16)]">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-[#00f0ff]/10 border border-[#00f0ff]/35 flex items-center justify-center shrink-0">
+          <div className="hud-surface-elevated rounded-xl overflow-hidden">
+            <div className="p-3.5 flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-lg bg-[var(--hud-hover)] border border-[var(--hud-divider)] flex items-center justify-center shrink-0">
                 <ManeuverIcon
                   type={activeStep.maneuverType}
                   modifier={activeStep.maneuverModifier}
@@ -72,31 +72,29 @@ export function TurnByTurnCard() {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-lg font-bold text-[#00f0ff] tracking-tight">
+                  <span className="font-mono text-lg font-bold tabular-nums tracking-tight">
                     {simulationStatus === 'completed'
-                      ? 'ARRIVED'
-                      : `In ${formatDistance(distanceToNextTurn)}`}
+                      ? 'Arrived'
+                      : formatDistance(distanceToNextTurn)}
                   </span>
                   {activeStep.streetName && (
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 truncate">
+                    <span className="text-[11px] font-medium text-[var(--hud-text-muted)] truncate">
                       {activeStep.streetName}
                     </span>
                   )}
                 </div>
-                <p className="text-sm font-medium text-white leading-snug line-clamp-2 mt-0.5">
+                <p className="text-sm font-medium leading-snug line-clamp-2 mt-0.5">
                   {activeStep.instruction}
                 </p>
               </div>
             </div>
 
             {followingStep && simulationStatus !== 'completed' && (
-              <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="uppercase font-mono tracking-wider text-[#ff007f]">
-                  Then
+              <div className="px-3.5 py-2 border-t border-[var(--hud-divider)] flex items-center justify-between text-xs text-[var(--hud-text-muted)]">
+                <span className="font-mono text-[10px] uppercase tracking-wider shrink-0">
+                  Next
                 </span>
-                <span className="truncate ml-2 text-slate-300">
-                  {followingStep.instruction}
-                </span>
+                <span className="truncate ml-3">{followingStep.instruction}</span>
               </div>
             )}
           </div>

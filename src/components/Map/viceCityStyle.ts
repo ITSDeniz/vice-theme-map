@@ -236,15 +236,15 @@ export function applyViceCityTheme(
                   ['linear'],
                   ['coalesce', ['get', 'render_height'], ['get', 'height'], 12],
                   0,
-                  '#dde6f0',
-                  15,
-                  '#b6d3f2',
-                  40,
-                  '#7eb8f2',
-                  90,
-                  '#4798eb',
-                  160,
-                  '#1d78db',
+                  '#e5ecf3',
+                  18,
+                  '#cedce9',
+                  45,
+                  '#adc3da',
+                  95,
+                  '#86a5c6',
+                  170,
+                  '#6386ad',
                 ]
               : [
                   'interpolate',
@@ -290,9 +290,9 @@ export function applyViceCityTheme(
       isLight
         ? {
             anchor: 'viewport',
-            color: '#a8dcff',
-            intensity: 0.48,
-            position: [1.2, 210, 40],
+            color: '#eef6ff',
+            intensity: 0.42,
+            position: [1.2, 210, 42],
           }
         : {
             anchor: 'viewport',

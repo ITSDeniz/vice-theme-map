@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ViceMap } from './components/Map/ViceMap';
 import { AlertToast, MapControls } from './components/HUD/MapControls';
@@ -14,6 +15,11 @@ export default function App() {
   const simulationStatus = useNavStore((s) => s.simulationStatus);
   const isDriving = simulationStatus === 'playing';
   const isHudIdle = useAutoHideHud(isDriving, 4200);
+
+  // Keep <html> class synchronized with active Light / Dark theme
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
 
   return (
     <main
@@ -34,16 +40,14 @@ export default function App() {
         <MapControls />
         <div
           className={`fixed right-3 sm:right-4 z-30 transition-all ${
-            simulationStatus !== 'idle'
-              ? 'bottom-28 sm:bottom-7'
-              : 'bottom-7'
+            simulationStatus !== 'idle' ? 'bottom-28 sm:bottom-7' : 'bottom-7'
           }`}
         >
           <IFruitRadio />
         </div>
       </motion.div>
 
-      {/* Primary Driving Telemetry (Always visible during navigation) */}
+      {/* Primary Driving Telemetry */}
       <TurnByTurnCard />
       <Speedometer />
       <AlertToast />

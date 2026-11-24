@@ -141,6 +141,16 @@ export function ViceMap() {
 
     mapRef.current = map;
 
+    // Sync live compass bearing via CSS variable (zero React re-renders)
+    const syncCompassBearing = () => {
+      document.documentElement.style.setProperty(
+        '--map-bearing',
+        `${-map.getBearing()}deg`
+      );
+    };
+    map.on('rotate', syncCompassBearing);
+    syncCompassBearing();
+
     map.on('style.load', () => {
       const currentTheme = useNavStore.getState().theme;
       applyViceCityTheme(map, currentTheme);
@@ -407,7 +417,6 @@ export function ViceMap() {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div ref={mapContainerRef} className="w-full h-full" />
-      {theme === 'dark' && <div className="vice-scanlines absolute inset-0 z-10" />}
     </div>
   );
 }

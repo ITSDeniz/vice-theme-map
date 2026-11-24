@@ -2,15 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowUpDown,
-  Clock,
   Crosshair,
   Loader2,
   MapPin,
-  Navigation,
   Play,
-  Route as RouteIcon,
   Search,
-  Sparkles,
   Square,
   X,
 } from 'lucide-react';
@@ -56,7 +52,6 @@ export function SearchBar() {
   const resetSimulation = useNavStore((s) => s.resetSimulation);
   const showAlert = useNavStore((s) => s.showAlert);
 
-  // Sync displayed text when origin/destination updated from map click
   useEffect(() => {
     if (activeField !== 'origin') {
       setOriginQuery(origin ? origin.name : '');
@@ -69,7 +64,6 @@ export function SearchBar() {
     }
   }, [destination, activeField]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -82,7 +76,6 @@ export function SearchBar() {
 
   const currentQuery = activeField === 'origin' ? originQuery : destQuery;
 
-  // Debounced Nominatim search (450ms)
   useEffect(() => {
     if (!activeField) return;
     const trimmed = currentQuery.trim();
@@ -107,16 +100,14 @@ export function SearchBar() {
         setResults(items);
       } catch (err) {
         if (!(err instanceof DOMException && err.name === 'AbortError')) {
-          showAlert('warning', 'Search service timed out. Try again or click the map.');
+          showAlert('warning', 'Search timed out. Try again or click on the map.');
         }
       } finally {
         setIsSearching(false);
       }
     }, 450);
 
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [currentQuery, activeField, origin, userLocation, showAlert]);
 
   const calculateAndSetRoute = async (
@@ -240,8 +231,6 @@ export function SearchBar() {
 
   const showDropdown = activeField !== null;
 
-  // During active Demo Drive, collapse SearchBar into a compact exit pill so
-  // TurnByTurnCard never overlaps on mobile, tablet, or 1024px-1280px laptops.
   if (simulationStatus !== 'idle') {
     return (
       <div className="fixed top-16 sm:top-4 left-3 sm:left-4 z-30">
@@ -251,9 +240,9 @@ export function SearchBar() {
             playUiClick();
             resetSimulation();
           }}
-          className="vice-glass hover:border-[#ff007f]/70 active:scale-95 transition-all rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-semibold text-slate-100 cursor-pointer"
+          className="hud-surface hover:bg-[var(--hud-hover)] active:scale-95 transition-all rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-medium cursor-pointer"
         >
-          <Square className="w-3.5 h-3.5 text-[#ff007f]" />
+          <Square className="w-3.5 h-3.5 text-[var(--accent-pink)]" />
           <span className="hidden sm:inline">Exit Drive</span>
         </button>
       </div>
@@ -263,30 +252,30 @@ export function SearchBar() {
   return (
     <div
       ref={containerRef}
-      className="fixed top-16 sm:top-4 left-3 right-3 sm:right-auto sm:left-4 z-30 sm:w-96 max-w-md flex flex-col gap-2.5"
+      className="fixed top-16 sm:top-4 left-3 right-3 sm:right-auto sm:left-4 z-30 sm:w-[356px] max-w-md flex flex-col gap-2"
     >
-      {/* Dual From / To Glassmorphic Search Card */}
-      <div className="vice-glass rounded-2xl p-2.5 transition-all focus-within:border-[#ff007f]/70 focus-within:shadow-[0_0_24px_rgba(255,0,127,0.25)]">
-        {/* Origin (From) Row */}
-        <div className="flex items-center gap-2 px-1.5 pb-2 border-b border-white/10">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] shrink-0" />
+      {/* Dual From / To Search Panel */}
+      <div className="hud-surface rounded-xl p-2.5">
+        {/* Origin Row */}
+        <div className="flex items-center gap-2.5 px-1.5 pb-2 border-b border-[var(--hud-divider)]">
+          <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
           <input
             type="text"
             value={originQuery}
             onFocus={() => setActiveField('origin')}
             onChange={(e) => setOriginQuery(e.target.value)}
-            placeholder="Start: Current Location (Miami)"
+            placeholder="Start: Current Location"
             aria-label="Starting point"
-            className="w-full bg-transparent text-xs text-slate-200 placeholder-slate-400 focus:outline-none"
+            className="w-full bg-transparent text-xs text-[var(--hud-text)] placeholder-[var(--hud-text-muted)] focus:outline-none"
           />
 
           {origin ? (
             <button
               type="button"
               onClick={handleUseCurrentLocation}
-              title="Reset start to Current Location"
-              aria-label="Reset start to Current Location"
-              className="p-1 rounded-md text-[#00f0ff] hover:bg-white/10 transition-colors cursor-pointer"
+              title="Reset start to current location"
+              aria-label="Reset start to current location"
+              className="p-1 rounded-md text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)] transition-colors cursor-pointer"
             >
               <Crosshair className="w-3.5 h-3.5" />
             </button>
@@ -296,15 +285,15 @@ export function SearchBar() {
               onClick={() =>
                 setPickingMode(pickingMode === 'origin' ? 'destination' : 'origin')
               }
-              title="Click map to pick Start point"
+              title="Click map to pick starting point"
               aria-label="Pick start point on map"
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer shrink-0 ${
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer shrink-0 ${
                 pickingMode === 'origin'
-                  ? 'bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/60'
-                  : 'text-slate-400 hover:text-[#00f0ff] hover:bg-white/5'
+                  ? 'bg-sky-500/15 text-sky-500'
+                  : 'text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)]'
               }`}
             >
-              {pickingMode === 'origin' ? 'Click Map' : 'Set Start'}
+              {pickingMode === 'origin' ? 'Click map' : 'Pick start'}
             </button>
           )}
 
@@ -314,19 +303,19 @@ export function SearchBar() {
               onClick={handleSwapPoints}
               title="Swap start and destination"
               aria-label="Swap start and destination"
-              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)] transition-colors cursor-pointer"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {/* Destination (To) Row */}
-        <div className="flex items-center gap-2 px-1.5 pt-2">
+        {/* Destination Row */}
+        <div className="flex items-center gap-2.5 px-1.5 pt-2">
           {isSearching || isRouting ? (
-            <Loader2 className="w-4 h-4 text-[#ff007f] animate-spin shrink-0" />
+            <Loader2 className="w-4 h-4 text-[var(--accent-pink)] animate-spin shrink-0" />
           ) : (
-            <Search className="w-4 h-4 text-[#ff007f] shrink-0" />
+            <Search className="w-4 h-4 text-[var(--hud-text-muted)] shrink-0" />
           )}
 
           <input
@@ -334,9 +323,9 @@ export function SearchBar() {
             value={destQuery}
             onFocus={() => setActiveField('destination')}
             onChange={(e) => setDestQuery(e.target.value)}
-            placeholder="Search destination or click map..."
+            placeholder="Search destination or click map"
             aria-label="Search destination"
-            className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
+            className="w-full bg-transparent text-sm text-[var(--hud-text)] placeholder-[var(--hud-text-muted)] focus:outline-none"
           />
 
           {(destQuery || destination) && (
@@ -344,32 +333,25 @@ export function SearchBar() {
               type="button"
               onClick={handleClear}
               aria-label="Clear destination and route"
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {/* Hint bar & Quick Demo Drive button when idle */}
+        {/* Subtle Footer Action */}
         {!destination && !activeField && (
-          <div className="px-1.5 pt-2 mt-1.5 border-t border-white/5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
-            <span className="flex items-center gap-1.5 truncate">
-              <MapPin
-                className={`w-3 h-3 shrink-0 ${
-                  pickingMode === 'origin' ? 'text-[#00f0ff]' : 'text-[#ff007f]'
-                }`}
-              />
-              <span className="truncate">
-                {pickingMode === 'origin'
-                  ? 'Click map to set starting point'
-                  : 'Click map to drop destination'}
-              </span>
+          <div className="px-1.5 pt-2 mt-2 border-t border-[var(--hud-divider)] flex items-center justify-between gap-2 text-[11px] text-[var(--hud-text-muted)]">
+            <span className="truncate">
+              {pickingMode === 'origin'
+                ? 'Click anywhere on map to set start'
+                : 'Click map to set destination'}
             </span>
             <button
               type="button"
               onClick={handleQuickDemoDrive}
-              className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#ff007f] to-[#ff6b00] hover:brightness-110 active:scale-95 text-[11px] font-semibold text-white flex items-center gap-1 shadow-[0_0_16px_rgba(255,0,127,0.45)] transition-all cursor-pointer"
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-[var(--accent-pink)] hover:bg-[var(--accent-pink-hover)] active:scale-95 text-[11px] font-semibold text-white flex items-center gap-1 transition-all cursor-pointer"
             >
               <Play className="w-3 h-3 fill-current" />
               Demo Drive
@@ -378,24 +360,23 @@ export function SearchBar() {
         )}
       </div>
 
-      {/* Autocomplete / Quick Presets Dropdown */}
+      {/* Autocomplete / Presets Dropdown */}
       <AnimatePresence>
         {showDropdown && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
+            initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16 }}
-            className="vice-glass rounded-2xl overflow-hidden divide-y divide-white/5 max-h-72 overflow-y-auto"
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.14 }}
+            className="hud-surface-elevated rounded-xl overflow-hidden divide-y divide-[var(--hud-divider)] max-h-72 overflow-y-auto"
           >
             {currentQuery.trim().length < 2 ? (
               <div>
-                <div className="px-3.5 py-2 flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-[#00f0ff]">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3" />
+                <div className="px-3.5 py-2 flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[var(--hud-text-muted)]">
+                  <span>
                     {activeField === 'origin'
-                      ? 'Pick Starting Point'
-                      : 'Leonida Hotspots'}
+                      ? 'Choose starting point'
+                      : 'Popular destinations'}
                   </span>
                   {activeField === 'origin' && (
                     <button
@@ -404,9 +385,9 @@ export function SearchBar() {
                         setActiveField(null);
                         void handleUseCurrentLocation();
                       }}
-                      className="text-[10px] text-[#ff007f] hover:underline cursor-pointer"
+                      className="text-[11px] font-sans font-medium text-[var(--accent-pink)] hover:underline cursor-pointer normal-case"
                     >
-                      Use My Location
+                      Use my location
                     </button>
                   )}
                 </div>
@@ -415,18 +396,12 @@ export function SearchBar() {
                     key={preset.placeId}
                     type="button"
                     onClick={() => handleSelectPlace(preset)}
-                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#ff007f]/15 transition-colors flex items-start gap-2.5 cursor-pointer"
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-[var(--hud-hover)] transition-colors flex items-start gap-2.5 cursor-pointer"
                   >
-                    <MapPin
-                      className={`w-4 h-4 shrink-0 mt-0.5 ${
-                        activeField === 'origin' ? 'text-[#00f0ff]' : 'text-[#ff007f]'
-                      }`}
-                    />
+                    <MapPin className="w-4 h-4 text-[var(--hud-text-muted)] shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-100 truncate">
-                        {preset.name}
-                      </p>
-                      <p className="text-xs text-slate-400 truncate">
+                      <p className="text-sm font-medium truncate">{preset.name}</p>
+                      <p className="text-xs text-[var(--hud-text-muted)] truncate">
                         {preset.displayName}
                       </p>
                     </div>
@@ -434,9 +409,9 @@ export function SearchBar() {
                 ))}
               </div>
             ) : isSearching ? (
-              <div className="px-4 py-4 flex items-center gap-2.5 text-xs text-slate-300">
-                <Loader2 className="w-4 h-4 text-[#00f0ff] animate-spin" />
-                Scanning Leonida grid...
+              <div className="px-4 py-3.5 flex items-center gap-2 text-xs text-[var(--hud-text-muted)]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Searching...
               </div>
             ) : results.length > 0 ? (
               results.map((item) => (
@@ -444,49 +419,42 @@ export function SearchBar() {
                   key={item.placeId}
                   type="button"
                   onClick={() => handleSelectPlace(item)}
-                  className="w-full text-left px-3.5 py-2.5 hover:bg-[#ff007f]/15 transition-colors flex items-start gap-2.5 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2.5 hover:bg-[var(--hud-hover)] transition-colors flex items-start gap-2.5 cursor-pointer"
                 >
-                  <MapPin
-                    className={`w-4 h-4 shrink-0 mt-0.5 ${
-                      activeField === 'origin' ? 'text-[#00f0ff]' : 'text-[#ff007f]'
-                    }`}
-                  />
+                  <MapPin className="w-4 h-4 text-[var(--hud-text-muted)] shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-100 truncate">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-[var(--hud-text-muted)] truncate">
                       {item.displayName}
                     </p>
                   </div>
                 </button>
               ))
             ) : (
-              <div className="px-4 py-3 text-xs text-slate-400">
-                No locations found. Try another search or click on the map.
+              <div className="px-4 py-3 text-xs text-[var(--hud-text-muted)]">
+                No results found.
               </div>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Route Summary Card */}
+      {/* Route Summary Card (Flat typographic layout) */}
       <AnimatePresence>
         {destination && (route || isRouting) && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="vice-glass rounded-2xl p-3.5 flex flex-col gap-2.5"
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="hud-surface rounded-xl p-3.5 flex flex-col gap-3"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-[#ff007f]">
-                  <Navigation className="w-3 h-3" />
-                  Active Waypoint
-                </div>
-                <p className="text-sm font-semibold text-white truncate mt-0.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--hud-text-muted)]">
+                  Destination
+                </span>
+                <p className="text-sm font-semibold truncate mt-0.5">
                   {destination.name}
                 </p>
               </div>
@@ -494,73 +462,60 @@ export function SearchBar() {
                 type="button"
                 onClick={handleClear}
                 aria-label="Clear route"
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-[var(--hud-text-muted)] hover:text-[var(--hud-text)] hover:bg-[var(--hud-hover)] transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {isRouting ? (
-              <div className="flex items-center gap-2 text-xs text-[#00f0ff] py-1">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Calculating optimal neon route...
+              <div className="flex items-center gap-2 text-xs text-[var(--hud-text-muted)] py-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Calculating route...
               </div>
             ) : (
               route && (
                 <>
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
-                    <div className="bg-white/5 rounded-xl px-2.5 py-2">
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-mono">
-                        <Clock className="w-3 h-3 text-[#00f0ff]" />
-                        Duration
-                      </div>
-                      <p className="text-sm font-bold font-mono text-white mt-0.5">
+                  <div className="grid grid-cols-3 divide-x divide-[var(--hud-divider)] pt-2.5 border-t border-[var(--hud-divider)]">
+                    <div className="pr-2">
+                      <span className="text-[10px] font-mono uppercase text-[var(--hud-text-muted)] block">
+                        Time
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums">
                         {formatDuration(remainingDuration)}
-                      </p>
+                      </span>
                     </div>
 
-                    <div className="bg-white/5 rounded-xl px-2.5 py-2">
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-mono">
-                        <RouteIcon className="w-3 h-3 text-[#ff007f]" />
+                    <div className="px-3">
+                      <span className="text-[10px] font-mono uppercase text-[var(--hud-text-muted)] block">
                         Distance
-                      </div>
-                      <p className="text-sm font-bold font-mono text-white mt-0.5">
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums">
                         {formatDistance(remainingDistance)}
-                      </p>
+                      </span>
                     </div>
 
-                    <div className="bg-white/5 rounded-xl px-2.5 py-2">
-                      <div className="text-[10px] text-slate-400 uppercase font-mono">
-                        ETA
-                      </div>
-                      <p className="text-sm font-bold font-mono text-[#ff6b00] mt-0.5">
+                    <div className="pl-3">
+                      <span className="text-[10px] font-mono uppercase text-[var(--hud-text-muted)] block">
+                        Arrival
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums">
                         {formatEtaClock(remainingDuration)}
-                      </p>
+                      </span>
                     </div>
                   </div>
 
-                  {simulationStatus === 'idle' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playNavChime();
-                        setSimulationStatus('playing');
-                      }}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#ff007f] via-[#ff2a85] to-[#ff6b00] hover:brightness-110 active:scale-[0.98] text-xs font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(255,0,127,0.45)] transition-all cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      Start Demo Drive
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={resetSimulation}
-                      className="w-full py-2 px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <Square className="w-3.5 h-3.5 text-[#ff007f]" />
-                      Exit Demo Drive
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playNavChime();
+                      setSimulationStatus('playing');
+                    }}
+                    className="w-full py-2.5 px-4 rounded-lg bg-[var(--accent-pink)] hover:bg-[var(--accent-pink-hover)] active:scale-[0.99] text-xs font-semibold tracking-wide text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    Start Demo Drive
+                  </button>
                 </>
               )
             )}
