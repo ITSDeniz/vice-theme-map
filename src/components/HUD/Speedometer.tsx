@@ -24,9 +24,9 @@ export function Speedometer() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 18 }}
           transition={{ duration: 0.24 }}
-          className="fixed bottom-4 left-3 sm:bottom-5 sm:left-4 z-30"
+          className="fixed bottom-4 left-3 right-3 sm:right-auto sm:bottom-5 sm:left-4 z-30"
         >
-          <div className="hud-surface-elevated rounded-xl px-4 py-3 flex items-center gap-4">
+          <div className="hud-surface-elevated rounded-xl px-4 py-3 flex items-center justify-between sm:justify-start gap-4">
             {/* Digital Automotive Speed Readout */}
             <div className="w-20 flex flex-col">
               <div className="flex items-baseline gap-1 leading-none">

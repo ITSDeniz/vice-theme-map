@@ -551,7 +551,7 @@ export function IFruitRadio() {
         aria-hidden="true"
       />
 
-      <div className="hud-surface rounded-xl px-3 py-2 flex items-center gap-2.5 w-[312px] sm:w-[344px]">
+      <div className="hud-surface rounded-xl px-3 py-2 flex items-center gap-2.5 w-full sm:w-[344px]">
         <button
           type="button"
           onClick={handleTogglePlay}

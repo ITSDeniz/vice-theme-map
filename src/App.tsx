@@ -39,8 +39,8 @@ export default function App() {
         <SearchBar />
         <MapControls />
         <div
-          className={`fixed right-3 sm:right-4 z-30 transition-all ${
-            simulationStatus !== 'idle' ? 'bottom-28 sm:bottom-10' : 'bottom-10'
+          className={`fixed left-3 right-3 sm:left-auto sm:right-4 z-30 transition-all ${
+            simulationStatus !== 'idle' ? 'bottom-24 sm:bottom-10' : 'bottom-10'
           }`}
         >
           <IFruitRadio />

@@ -108,9 +108,62 @@ export function MapControls() {
     'px-2.5 py-2 flex items-center justify-center gap-1.5 text-xs font-medium transition-colors hover:bg-[var(--hud-hover)] active:opacity-75 cursor-pointer';
 
   return (
-    <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-2">
+    <div className="fixed top-3 left-3 right-3 sm:left-auto sm:top-4 sm:right-4 z-30 flex items-center justify-between sm:justify-end gap-2">
+      {/* Wordmark with subtle VI + palm trees emblem behind text */}
+      <div className="hud-surface relative overflow-hidden rounded-xl px-3 sm:px-4 py-2 flex sm:hidden lg:flex items-baseline gap-1.5 order-1 sm:order-2">
+        <svg
+          viewBox="0 0 88 40"
+          className="absolute inset-0 w-full h-full pointer-events-none opacity-35 dark:opacity-45"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="viSunsetGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff8a3d" />
+              <stop offset="52%" stopColor="#ff1f7a" />
+              <stop offset="100%" stopColor="#6d28d9" />
+            </linearGradient>
+            <clipPath id="viPalmClip">
+              {/* Bold geometric V */}
+              <polygon points="10,4 23,4 32,27 41,4 54,4 37,36 27,36" />
+              {/* Bold geometric I */}
+              <rect x="60" y="4" width="14" height="32" rx="1" />
+            </clipPath>
+          </defs>
+
+          <g clipPath="url(#viPalmClip)">
+            <rect x="0" y="0" width="88" height="40" fill="url(#viSunsetGrad)" />
+            {/* Left palm silhouette */}
+            <path
+              d="M27,38 Q29,28 26,20 M26,20 Q20,17 15,21 M26,20 Q21,14 16,14 M26,20 Q28,13 33,14 M26,20 Q32,17 36,21"
+              stroke="#0f172a"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.78"
+            />
+            {/* Right palm silhouette */}
+            <path
+              d="M66,38 Q65,27 68,18 M68,18 Q62,15 58,19 M68,18 Q63,12 59,12 M68,18 Q70,11 75,13 M68,18 Q74,16 77,20"
+              stroke="#0f172a"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.78"
+            />
+          </g>
+        </svg>
+
+        <span className="relative z-10 font-[var(--font-display)] text-xs sm:text-sm font-bold tracking-[0.16em] uppercase">
+          VICE
+        </span>
+        <span className="relative z-10 font-[var(--font-display)] text-[11px] sm:text-xs font-medium tracking-[0.12em] uppercase text-[var(--hud-text-muted)]">
+          NAV
+        </span>
+      </div>
+
       {/* Unified Segmented Control Rail */}
-      <div className="hud-surface rounded-xl flex items-center divide-x divide-[var(--hud-divider)] overflow-hidden">
+      <div className="hud-surface rounded-xl flex items-center divide-x divide-[var(--hud-divider)] overflow-hidden order-2 sm:order-1">
         <button
           type="button"
           onClick={handleToggleTraffic}
@@ -201,59 +254,6 @@ export function MapControls() {
             style={{ transform: 'rotate(var(--map-bearing, 0deg))' }}
           />
         </button>
-      </div>
-
-      {/* Wordmark with subtle VI + palm trees emblem behind text */}
-      <div className="hud-surface relative overflow-hidden rounded-xl px-4 py-2 hidden lg:flex items-baseline gap-1.5">
-        <svg
-          viewBox="0 0 88 40"
-          className="absolute inset-0 w-full h-full pointer-events-none opacity-35 dark:opacity-45"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id="viSunsetGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ff8a3d" />
-              <stop offset="52%" stopColor="#ff1f7a" />
-              <stop offset="100%" stopColor="#6d28d9" />
-            </linearGradient>
-            <clipPath id="viPalmClip">
-              {/* Bold geometric V */}
-              <polygon points="10,4 23,4 32,27 41,4 54,4 37,36 27,36" />
-              {/* Bold geometric I */}
-              <rect x="60" y="4" width="14" height="32" rx="1" />
-            </clipPath>
-          </defs>
-
-          <g clipPath="url(#viPalmClip)">
-            <rect x="0" y="0" width="88" height="40" fill="url(#viSunsetGrad)" />
-            {/* Left palm silhouette */}
-            <path
-              d="M27,38 Q29,28 26,20 M26,20 Q20,17 15,21 M26,20 Q21,14 16,14 M26,20 Q28,13 33,14 M26,20 Q32,17 36,21"
-              stroke="#0f172a"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              fill="none"
-              opacity="0.78"
-            />
-            {/* Right palm silhouette */}
-            <path
-              d="M66,38 Q65,27 68,18 M68,18 Q62,15 58,19 M68,18 Q63,12 59,12 M68,18 Q70,11 75,13 M68,18 Q74,16 77,20"
-              stroke="#0f172a"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              fill="none"
-              opacity="0.78"
-            />
-          </g>
-        </svg>
-
-        <span className="relative z-10 font-[var(--font-display)] text-sm font-bold tracking-[0.16em] uppercase">
-          VICE
-        </span>
-        <span className="relative z-10 font-[var(--font-display)] text-xs font-medium tracking-[0.12em] uppercase text-[var(--hud-text-muted)]">
-          NAV
-        </span>
       </div>
     </div>
   );
