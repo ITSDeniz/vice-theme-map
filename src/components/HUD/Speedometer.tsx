@@ -27,7 +27,7 @@ export function Speedometer() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 24, scale: 0.94 }}
           transition={{ duration: 0.28 }}
-          className="fixed bottom-5 left-4 z-30 flex items-end gap-3"
+          className="fixed bottom-4 left-3 sm:bottom-5 sm:left-4 z-30 flex items-end gap-3"
         >
           <div className="vice-glass rounded-2xl px-4 py-3 flex items-center gap-4">
             {/* Neon Arc Speed Gauge */}

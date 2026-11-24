@@ -27,7 +27,13 @@ export default function App() {
       >
         <SearchBar />
         <MapControls />
-        <div className="fixed bottom-7 right-4 z-30">
+        <div
+          className={`fixed right-3 sm:right-4 z-30 transition-all ${
+            simulationStatus !== 'idle'
+              ? 'bottom-28 sm:bottom-7'
+              : 'bottom-7'
+          }`}
+        >
           <IFruitRadio />
         </div>
       </motion.div>

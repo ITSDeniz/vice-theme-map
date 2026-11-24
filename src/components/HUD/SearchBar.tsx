@@ -240,10 +240,30 @@ export function SearchBar() {
 
   const showDropdown = activeField !== null;
 
+  // During active Demo Drive, collapse SearchBar into a compact exit pill so
+  // TurnByTurnCard never overlaps on mobile, tablet, or 1024px-1280px laptops.
+  if (simulationStatus !== 'idle') {
+    return (
+      <div className="fixed top-16 sm:top-4 left-3 sm:left-4 z-30">
+        <button
+          type="button"
+          onClick={() => {
+            playUiClick();
+            resetSimulation();
+          }}
+          className="vice-glass hover:border-[#ff007f]/70 active:scale-95 transition-all rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-semibold text-slate-100 cursor-pointer"
+        >
+          <Square className="w-3.5 h-3.5 text-[#ff007f]" />
+          <span className="hidden sm:inline">Exit Drive</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
-      className="fixed top-4 left-4 z-30 w-[calc(100vw-2rem)] sm:w-96 max-w-md flex flex-col gap-2.5"
+      className="fixed top-16 sm:top-4 left-3 right-3 sm:right-auto sm:left-4 z-30 sm:w-96 max-w-md flex flex-col gap-2.5"
     >
       {/* Dual From / To Glassmorphic Search Card */}
       <div className="vice-glass rounded-2xl p-2.5 transition-all focus-within:border-[#ff007f]/70 focus-within:shadow-[0_0_24px_rgba(255,0,127,0.25)]">

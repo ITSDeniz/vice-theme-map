@@ -59,7 +59,7 @@ export function TurnByTurnCard() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.96 }}
           transition={{ duration: 0.28 }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[340px] max-w-md pointer-events-auto"
+          className="fixed top-16 sm:top-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-1.5rem)] sm:w-auto sm:min-w-[330px] max-w-md pointer-events-auto"
         >
           <div className="vice-glass-cyan rounded-2xl p-3.5 shadow-[0_0_32px_rgba(0,240,255,0.16)]">
             <div className="flex items-center gap-3.5">

@@ -71,18 +71,18 @@ export function MapControls() {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-30 flex flex-col items-end gap-2.5">
+    <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-30 flex sm:flex-col items-center sm:items-end gap-2 sm:gap-2.5">
       {/* Vice Nav Identity Pill */}
-      <div className="vice-glass rounded-xl px-3.5 py-2 flex items-center gap-2.5">
+      <div className="vice-glass rounded-xl px-3 py-2 flex items-center gap-2">
         <span className="relative flex h-2.5 w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff007f] opacity-75" />
           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ff007f]" />
         </span>
         <div className="leading-none">
-          <span className="font-[var(--font-display)] text-sm font-bold tracking-widest uppercase bg-gradient-to-r from-[#ff007f] via-[#ff6b00] to-[#00f0ff] bg-clip-text text-transparent">
+          <span className="font-[var(--font-display)] text-xs sm:text-sm font-bold tracking-widest uppercase bg-gradient-to-r from-[#ff007f] via-[#ff6b00] to-[#00f0ff] bg-clip-text text-transparent">
             VICE NAV
           </span>
-          <span className="ml-2 text-[10px] font-mono tracking-wider text-slate-400 uppercase hidden sm:inline">
+          <span className="ml-2 text-[10px] font-mono tracking-wider text-slate-400 uppercase hidden lg:inline">
             LEONIDA OS
           </span>
         </div>
