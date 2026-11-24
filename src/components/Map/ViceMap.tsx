@@ -5,6 +5,7 @@ import { useNavStore, MIAMI_DEFAULT_COORDS } from '../../store/useNavStore';
 import { applyViceCityTheme, OPENFREEMAP_DARK_STYLE } from './viceCityStyle';
 import { reverseGeocode } from '../../services/geocoding';
 import { fetchRoute } from '../../services/routing';
+import { useDriveSimulation } from './useDriveSimulation';
 
 const ROUTE_SOURCE_ID = 'vice-route-source';
 const ROUTE_BLOOM_LAYER_ID = 'vice-route-bloom';
@@ -97,6 +98,9 @@ export function ViceMap() {
   const destination = useNavStore((s) => s.destination);
   const route = useNavStore((s) => s.route);
   const cameraRecenterNonce = useNavStore((s) => s.cameraRecenterNonce);
+
+  // 60 FPS Demo Drive loop & 3D chase camera (strictly ref-isolated)
+  useDriveSimulation(mapRef, userMarkerRef);
 
   // Initialize MapLibre instance once (strictly isolated outside React render cycle)
   useEffect(() => {

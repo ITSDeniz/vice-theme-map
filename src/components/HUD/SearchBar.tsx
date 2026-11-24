@@ -5,9 +5,11 @@ import {
   Loader2,
   MapPin,
   Navigation,
+  Play,
   Route as RouteIcon,
   Search,
   Sparkles,
+  Square,
   X,
 } from 'lucide-react';
 import { useNavStore } from '../../store/useNavStore';
@@ -32,12 +34,14 @@ export function SearchBar() {
   const destination = useNavStore((s) => s.destination);
   const route = useNavStore((s) => s.route);
   const isRouting = useNavStore((s) => s.isRouting);
+  const simulationStatus = useNavStore((s) => s.simulationStatus);
   const remainingDistance = useNavStore((s) => s.remainingDistance);
   const remainingDuration = useNavStore((s) => s.remainingDuration);
 
   const setDestination = useNavStore((s) => s.setDestination);
   const setRoute = useNavStore((s) => s.setRoute);
   const setIsRouting = useNavStore((s) => s.setIsRouting);
+  const setSimulationStatus = useNavStore((s) => s.setSimulationStatus);
   const clearRoute = useNavStore((s) => s.clearRoute);
   const resetSimulation = useNavStore((s) => s.resetSimulation);
   const showAlert = useNavStore((s) => s.showAlert);
@@ -85,7 +89,10 @@ export function SearchBar() {
     };
   }, [query, userLocation, showAlert]);
 
-  const handleSelectPlace = async (place: GeocodingResult) => {
+  const handleSelectPlace = async (
+    place: GeocodingResult,
+    autoStartDemo = false
+  ) => {
     setQuery(place.name);
     setIsFocused(false);
     resetSimulation();
@@ -99,6 +106,9 @@ export function SearchBar() {
     try {
       const routeData = await fetchRoute(userLocation, place.coordinates);
       setRoute(routeData);
+      if (autoStartDemo) {
+        setSimulationStatus('playing');
+      }
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : 'Unable to calculate route right now.';
@@ -107,6 +117,11 @@ export function SearchBar() {
     } finally {
       setIsRouting(false);
     }
+  };
+
+  const handleQuickDemoDrive = () => {
+    const oceanDrive = VICE_CITY_PRESETS[0];
+    void handleSelectPlace(oceanDrive, true);
   };
 
   const handleClear = () => {
@@ -153,13 +168,21 @@ export function SearchBar() {
           )}
         </div>
 
-        {/* Hint bar when idle */}
+        {/* Hint bar & Quick Demo Drive button when idle */}
         {!destination && !isFocused && (
-          <div className="px-2 pb-1 pt-0.5 flex items-center justify-between text-[11px] text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <MapPin className="w-3 h-3 text-[#00f0ff]" />
-              Click anywhere on map to drop a waypoint
+          <div className="px-2 pb-1 pt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+            <span className="flex items-center gap-1.5 truncate">
+              <MapPin className="w-3 h-3 text-[#00f0ff] shrink-0" />
+              <span className="truncate">Click map to drop waypoint</span>
             </span>
+            <button
+              type="button"
+              onClick={handleQuickDemoDrive}
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#ff007f] to-[#ff6b00] hover:brightness-110 active:scale-95 text-[11px] font-semibold text-white flex items-center gap-1 shadow-[0_0_16px_rgba(255,0,127,0.45)] transition-all cursor-pointer"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              Demo Drive
+            </button>
           </div>
         )}
       </div>
@@ -269,36 +292,58 @@ export function SearchBar() {
               </div>
             ) : (
               route && (
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
-                  <div className="bg-white/5 rounded-xl px-2.5 py-2">
-                    <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-mono">
-                      <Clock className="w-3 h-3 text-[#00f0ff]" />
-                      Duration
+                <>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
+                    <div className="bg-white/5 rounded-xl px-2.5 py-2">
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-mono">
+                        <Clock className="w-3 h-3 text-[#00f0ff]" />
+                        Duration
+                      </div>
+                      <p className="text-sm font-bold font-mono text-white mt-0.5">
+                        {formatDuration(remainingDuration)}
+                      </p>
                     </div>
-                    <p className="text-sm font-bold font-mono text-white mt-0.5">
-                      {formatDuration(remainingDuration)}
-                    </p>
+
+                    <div className="bg-white/5 rounded-xl px-2.5 py-2">
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-mono">
+                        <RouteIcon className="w-3 h-3 text-[#ff007f]" />
+                        Distance
+                      </div>
+                      <p className="text-sm font-bold font-mono text-white mt-0.5">
+                        {formatDistance(remainingDistance)}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl px-2.5 py-2">
+                      <div className="text-[10px] text-slate-400 uppercase font-mono">
+                        ETA
+                      </div>
+                      <p className="text-sm font-bold font-mono text-[#ff6b00] mt-0.5">
+                        {formatEtaClock(remainingDuration)}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="bg-white/5 rounded-xl px-2.5 py-2">
-                    <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-mono">
-                      <RouteIcon className="w-3 h-3 text-[#ff007f]" />
-                      Distance
-                    </div>
-                    <p className="text-sm font-bold font-mono text-white mt-0.5">
-                      {formatDistance(remainingDistance)}
-                    </p>
-                  </div>
-
-                  <div className="bg-white/5 rounded-xl px-2.5 py-2">
-                    <div className="text-[10px] text-slate-400 uppercase font-mono">
-                      ETA
-                    </div>
-                    <p className="text-sm font-bold font-mono text-[#ff6b00] mt-0.5">
-                      {formatEtaClock(remainingDuration)}
-                    </p>
-                  </div>
-                </div>
+                  {simulationStatus === 'idle' ? (
+                    <button
+                      type="button"
+                      onClick={() => setSimulationStatus('playing')}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#ff007f] via-[#ff2a85] to-[#ff6b00] hover:brightness-110 active:scale-[0.98] text-xs font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(255,0,127,0.45)] transition-all cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      Start Demo Drive
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={resetSimulation}
+                      className="w-full py-2 px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Square className="w-3.5 h-3.5 text-[#ff007f]" />
+                      Exit Demo Drive
+                    </button>
+                  )}
+                </>
               )
             )}
           </motion.div>
