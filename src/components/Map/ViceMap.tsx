@@ -155,15 +155,14 @@ export function ViceMap() {
         fetchRoute(store.userLocation, clickedCoords),
       ]);
 
-      if (placeInfo.status === 'fulfilled') {
-        useNavStore.getState().setDestination({
-          name: placeInfo.value.name,
-          displayName: placeInfo.value.displayName,
-          coordinates: clickedCoords,
-        });
-      }
-
       if (routeResult.status === 'fulfilled') {
+        if (placeInfo.status === 'fulfilled') {
+          useNavStore.getState().setDestination({
+            name: placeInfo.value.name,
+            displayName: placeInfo.value.displayName,
+            coordinates: clickedCoords,
+          });
+        }
         useNavStore.getState().setRoute(routeResult.value);
       } else {
         const msg =
@@ -171,6 +170,7 @@ export function ViceMap() {
             ? routeResult.reason.message
             : 'Unable to calculate route to that point.';
         useNavStore.getState().showAlert('error', msg);
+        useNavStore.getState().setDestination(null);
         useNavStore.getState().setRoute(null);
       }
 

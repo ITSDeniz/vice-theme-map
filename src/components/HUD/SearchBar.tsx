@@ -113,6 +113,7 @@ export function SearchBar() {
       const msg =
         err instanceof Error ? err.message : 'Unable to calculate route right now.';
       showAlert('error', msg);
+      setDestination(null);
       setRoute(null);
     } finally {
       setIsRouting(false);

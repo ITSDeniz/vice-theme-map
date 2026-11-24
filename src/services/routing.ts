@@ -28,14 +28,22 @@ interface OsrmRoute {
   legs: OsrmLeg[];
 }
 
+interface OsrmWaypoint {
+  distance: number; // meters from input coordinate to snapped road
+  name: string;
+  location: [number, number];
+}
+
 interface OsrmResponse {
   code: string;
   message?: string;
+  waypoints?: OsrmWaypoint[];
   routes?: OsrmRoute[];
 }
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
 const REQUEST_TIMEOUT_MS = 10000;
+const MAX_ROAD_SNAP_METERS = 350;
 
 function formatManeuverInstruction(step: OsrmStep): string {
   const { type, modifier, exit } = step.maneuver;
@@ -95,8 +103,22 @@ export async function fetchRoute(
     }
 
     const data: OsrmResponse = await res.json();
+    if (data.code === 'NoRoute' || data.code === 'NoSegment') {
+      throw new Error(
+        'No drivable route found — destination may be overseas or unreachable by road.'
+      );
+    }
+
     if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
       throw new Error(data.message || 'No drivable route found between these points.');
+    }
+
+    // Reject destinations snapped far across water / off-road (e.g. ocean clicks)
+    const destWaypoint = data.waypoints?.[1];
+    if (destWaypoint && destWaypoint.distance > MAX_ROAD_SNAP_METERS) {
+      throw new Error(
+        'Destination is over water or too far from a drivable road. Pick a location on land.'
+      );
     }
 
     const primary = data.routes[0];
