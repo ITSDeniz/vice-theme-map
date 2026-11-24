@@ -44,7 +44,7 @@ const RADIO_STATIONS: YouTubeRadioStation[] = [
       'LplPi2CxNHI',
       'KzWYzsaL83k',
     ],
-    playlistId: 'PLTFuoiI4cFGM',
+    playlistId: 'PLW26fgEAwt_s',
   },
 ];
 
