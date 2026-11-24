@@ -95,9 +95,12 @@ export function ViceMap() {
 
   const mapMode = useNavStore((s) => s.mapMode);
   const userLocation = useNavStore((s) => s.userLocation);
+  const origin = useNavStore((s) => s.origin);
   const destination = useNavStore((s) => s.destination);
   const route = useNavStore((s) => s.route);
   const cameraRecenterNonce = useNavStore((s) => s.cameraRecenterNonce);
+
+  const activeOriginCoords = origin?.coordinates ?? userLocation;
 
   // 60 FPS Demo Drive loop & 3D chase camera (strictly ref-isolated)
   useDriveSimulation(mapRef, userMarkerRef);
@@ -135,12 +138,64 @@ export function ViceMap() {
       }
     });
 
-    // Click on map to drop a destination pin and calculate route
+    // Click on map to drop an origin or destination waypoint and calculate route
     map.on('click', async (e) => {
       const store = useNavStore.getState();
       if (store.simulationStatus === 'playing') return;
 
       const clickedCoords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+
+      if (store.pickingMode === 'origin') {
+        store.resetSimulation();
+        store.setOrigin({
+          name: 'Custom Start',
+          displayName: `${clickedCoords[1].toFixed(5)}, ${clickedCoords[0].toFixed(5)}`,
+          coordinates: clickedCoords,
+        });
+        store.setPickingMode('destination');
+
+        const placeInfoPromise = reverseGeocode(clickedCoords);
+        if (store.destination) {
+          store.setIsRouting(true);
+          const [placeInfo, routeResult] = await Promise.allSettled([
+            placeInfoPromise,
+            fetchRoute(clickedCoords, store.destination.coordinates),
+          ]);
+
+          if (routeResult.status === 'fulfilled') {
+            if (placeInfo.status === 'fulfilled') {
+              useNavStore.getState().setOrigin({
+                name: placeInfo.value.name,
+                displayName: placeInfo.value.displayName,
+                coordinates: clickedCoords,
+              });
+            }
+            useNavStore.getState().setRoute(routeResult.value);
+          } else {
+            const msg =
+              routeResult.reason instanceof Error
+                ? routeResult.reason.message
+                : 'Unable to calculate route from that start point.';
+            useNavStore.getState().showAlert('error', msg);
+            useNavStore.getState().setOrigin(null);
+            useNavStore.getState().setRoute(null);
+          }
+          useNavStore.getState().setIsRouting(false);
+        } else {
+          const placeInfo = await placeInfoPromise;
+          useNavStore.getState().setOrigin({
+            name: placeInfo.name,
+            displayName: placeInfo.displayName,
+            coordinates: clickedCoords,
+          });
+          useNavStore
+            .getState()
+            .showAlert('info', `Start set to ${placeInfo.name}. Now choose a destination.`);
+        }
+        return;
+      }
+
+      const startCoords = store.origin?.coordinates ?? store.userLocation;
       store.resetSimulation();
       store.setDestination({
         name: 'Dropped Waypoint',
@@ -152,7 +207,7 @@ export function ViceMap() {
       // Run reverse geocode and OSRM route in parallel
       const [placeInfo, routeResult] = await Promise.allSettled([
         reverseGeocode(clickedCoords),
-        fetchRoute(store.userLocation, clickedCoords),
+        fetchRoute(startCoords, clickedCoords),
       ]);
 
       if (routeResult.status === 'fulfilled') {
@@ -203,12 +258,12 @@ export function ViceMap() {
     };
   }, []);
 
-  // Sync user marker position
+  // Sync active start marker position (custom origin or user GPS)
   useEffect(() => {
     if (userMarkerRef.current) {
-      userMarkerRef.current.setLngLat(userLocation);
+      userMarkerRef.current.setLngLat(activeOriginCoords);
     }
-  }, [userLocation]);
+  }, [activeOriginCoords]);
 
   // Sync destination marker
   useEffect(() => {

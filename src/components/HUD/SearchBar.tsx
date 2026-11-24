@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  ArrowUpDown,
   Clock,
+  Crosshair,
   Loader2,
   MapPin,
   Navigation,
@@ -21,16 +23,21 @@ import {
 import { fetchRoute } from '../../services/routing';
 import { formatDistance, formatDuration, formatEtaClock } from '../../utils/format';
 
+type ActiveField = 'origin' | 'destination' | null;
+
 export function SearchBar() {
-  const [query, setQuery] = useState('');
+  const [originQuery, setOriginQuery] = useState('');
+  const [destQuery, setDestQuery] = useState('');
+  const [activeField, setActiveField] = useState<ActiveField>(null);
   const [results, setResults] = useState<GeocodingResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const userLocation = useNavStore((s) => s.userLocation);
+  const origin = useNavStore((s) => s.origin);
+  const pickingMode = useNavStore((s) => s.pickingMode);
   const destination = useNavStore((s) => s.destination);
   const route = useNavStore((s) => s.route);
   const isRouting = useNavStore((s) => s.isRouting);
@@ -38,6 +45,8 @@ export function SearchBar() {
   const remainingDistance = useNavStore((s) => s.remainingDistance);
   const remainingDuration = useNavStore((s) => s.remainingDuration);
 
+  const setOrigin = useNavStore((s) => s.setOrigin);
+  const setPickingMode = useNavStore((s) => s.setPickingMode);
   const setDestination = useNavStore((s) => s.setDestination);
   const setRoute = useNavStore((s) => s.setRoute);
   const setIsRouting = useNavStore((s) => s.setIsRouting);
@@ -46,20 +55,36 @@ export function SearchBar() {
   const resetSimulation = useNavStore((s) => s.resetSimulation);
   const showAlert = useNavStore((s) => s.showAlert);
 
+  // Sync displayed text when origin/destination updated from map click
+  useEffect(() => {
+    if (activeField !== 'origin') {
+      setOriginQuery(origin ? origin.name : '');
+    }
+  }, [origin, activeField]);
+
+  useEffect(() => {
+    if (activeField !== 'destination') {
+      setDestQuery(destination ? destination.name : '');
+    }
+  }, [destination, activeField]);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsFocused(false);
+        setActiveField(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const currentQuery = activeField === 'origin' ? originQuery : destQuery;
+
   // Debounced Nominatim search (450ms)
   useEffect(() => {
-    const trimmed = query.trim();
+    if (!activeField) return;
+    const trimmed = currentQuery.trim();
     if (trimmed.length < 2) {
       setResults([]);
       setIsSearching(false);
@@ -73,7 +98,11 @@ export function SearchBar() {
 
       setIsSearching(true);
       try {
-        const items = await searchPlaces(trimmed, userLocation, controller.signal);
+        const items = await searchPlaces(
+          trimmed,
+          origin?.coordinates ?? userLocation,
+          controller.signal
+        );
         setResults(items);
       } catch (err) {
         if (!(err instanceof DOMException && err.name === 'AbortError')) {
@@ -87,60 +116,189 @@ export function SearchBar() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [query, userLocation, showAlert]);
+  }, [currentQuery, activeField, origin, userLocation, showAlert]);
+
+  const calculateAndSetRoute = async (
+    startCoords: [number, number],
+    endCoords: [number, number],
+    autoStartDemo = false
+  ) => {
+    setIsRouting(true);
+    try {
+      const routeData = await fetchRoute(startCoords, endCoords);
+      setRoute(routeData);
+      if (autoStartDemo) {
+        setSimulationStatus('playing');
+      }
+      return true;
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Unable to calculate route right now.';
+      showAlert('error', msg);
+      setRoute(null);
+      return false;
+    } finally {
+      setIsRouting(false);
+    }
+  };
 
   const handleSelectPlace = async (
     place: GeocodingResult,
     autoStartDemo = false
   ) => {
-    setQuery(place.name);
-    setIsFocused(false);
+    const targetField = activeField ?? 'destination';
+    setActiveField(null);
     resetSimulation();
+
+    if (targetField === 'origin') {
+      setOriginQuery(place.name);
+      setOrigin({
+        name: place.name,
+        displayName: place.displayName,
+        coordinates: place.coordinates,
+      });
+
+      if (destination) {
+        const ok = await calculateAndSetRoute(
+          place.coordinates,
+          destination.coordinates,
+          autoStartDemo
+        );
+        if (!ok) {
+          setOrigin(null);
+          setOriginQuery('');
+        }
+      }
+      return;
+    }
+
+    setDestQuery(place.name);
     setDestination({
       name: place.name,
       displayName: place.displayName,
       coordinates: place.coordinates,
     });
 
-    setIsRouting(true);
-    try {
-      const routeData = await fetchRoute(userLocation, place.coordinates);
-      setRoute(routeData);
-      if (autoStartDemo) {
-        setSimulationStatus('playing');
-      }
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : 'Unable to calculate route right now.';
-      showAlert('error', msg);
+    const startCoords = origin?.coordinates ?? userLocation;
+    const ok = await calculateAndSetRoute(
+      startCoords,
+      place.coordinates,
+      autoStartDemo
+    );
+    if (!ok) {
       setDestination(null);
-      setRoute(null);
-    } finally {
-      setIsRouting(false);
+      setDestQuery('');
     }
   };
 
+  const handleUseCurrentLocation = async () => {
+    setOrigin(null);
+    setOriginQuery('');
+    setPickingMode('destination');
+    if (destination) {
+      resetSimulation();
+      await calculateAndSetRoute(userLocation, destination.coordinates);
+    }
+  };
+
+  const handleSwapPoints = async () => {
+    if (!destination) return;
+    resetSimulation();
+
+    const prevOrigin = origin ?? {
+      name: 'Current Location',
+      displayName: 'Current Location',
+      coordinates: userLocation,
+    };
+    const prevDest = destination;
+
+    setOrigin(prevDest);
+    setOriginQuery(prevDest.name);
+    setDestination(prevOrigin);
+    setDestQuery(prevOrigin.name);
+
+    await calculateAndSetRoute(prevDest.coordinates, prevOrigin.coordinates);
+  };
+
   const handleQuickDemoDrive = () => {
+    setActiveField('destination');
     const oceanDrive = VICE_CITY_PRESETS[0];
     void handleSelectPlace(oceanDrive, true);
   };
 
   const handleClear = () => {
-    setQuery('');
+    setDestQuery('');
     setResults([]);
+    setActiveField(null);
+    setPickingMode('destination');
     clearRoute();
   };
 
-  const showDropdown = isFocused && (query.trim().length >= 2 || !destination);
+  const showDropdown = activeField !== null;
 
   return (
     <div
       ref={containerRef}
       className="fixed top-4 left-4 z-30 w-[calc(100vw-2rem)] sm:w-96 max-w-md flex flex-col gap-2.5"
     >
-      {/* Search Input Card */}
-      <div className="vice-glass rounded-2xl p-2 transition-all focus-within:border-[#ff007f]/70 focus-within:shadow-[0_0_24px_rgba(255,0,127,0.25)]">
-        <div className="flex items-center gap-2.5 px-2 py-1">
+      {/* Dual From / To Glassmorphic Search Card */}
+      <div className="vice-glass rounded-2xl p-2.5 transition-all focus-within:border-[#ff007f]/70 focus-within:shadow-[0_0_24px_rgba(255,0,127,0.25)]">
+        {/* Origin (From) Row */}
+        <div className="flex items-center gap-2 px-1.5 pb-2 border-b border-white/10">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] shrink-0" />
+          <input
+            type="text"
+            value={originQuery}
+            onFocus={() => setActiveField('origin')}
+            onChange={(e) => setOriginQuery(e.target.value)}
+            placeholder="Start: Current Location (Miami)"
+            aria-label="Starting point"
+            className="w-full bg-transparent text-xs text-slate-200 placeholder-slate-400 focus:outline-none"
+          />
+
+          {origin ? (
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              title="Reset start to Current Location"
+              aria-label="Reset start to Current Location"
+              className="p-1 rounded-md text-[#00f0ff] hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                setPickingMode(pickingMode === 'origin' ? 'destination' : 'origin')
+              }
+              title="Click map to pick Start point"
+              aria-label="Pick start point on map"
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer shrink-0 ${
+                pickingMode === 'origin'
+                  ? 'bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/60'
+                  : 'text-slate-400 hover:text-[#00f0ff] hover:bg-white/5'
+              }`}
+            >
+              {pickingMode === 'origin' ? 'Click Map' : 'Set Start'}
+            </button>
+          )}
+
+          {destination && (
+            <button
+              type="button"
+              onClick={handleSwapPoints}
+              title="Swap start and destination"
+              aria-label="Swap start and destination"
+              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Destination (To) Row */}
+        <div className="flex items-center gap-2 px-1.5 pt-2">
           {isSearching || isRouting ? (
             <Loader2 className="w-4 h-4 text-[#ff007f] animate-spin shrink-0" />
           ) : (
@@ -149,19 +307,19 @@ export function SearchBar() {
 
           <input
             type="text"
-            value={query}
-            onFocus={() => setIsFocused(true)}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search Vice City or click map..."
+            value={destQuery}
+            onFocus={() => setActiveField('destination')}
+            onChange={(e) => setDestQuery(e.target.value)}
+            placeholder="Search destination or click map..."
             aria-label="Search destination"
             className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
           />
 
-          {(query || destination) && (
+          {(destQuery || destination) && (
             <button
               type="button"
               onClick={handleClear}
-              aria-label="Clear search and route"
+              aria-label="Clear destination and route"
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -170,11 +328,19 @@ export function SearchBar() {
         </div>
 
         {/* Hint bar & Quick Demo Drive button when idle */}
-        {!destination && !isFocused && (
-          <div className="px-2 pb-1 pt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+        {!destination && !activeField && (
+          <div className="px-1.5 pt-2 mt-1.5 border-t border-white/5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
             <span className="flex items-center gap-1.5 truncate">
-              <MapPin className="w-3 h-3 text-[#00f0ff] shrink-0" />
-              <span className="truncate">Click map to drop waypoint</span>
+              <MapPin
+                className={`w-3 h-3 shrink-0 ${
+                  pickingMode === 'origin' ? 'text-[#00f0ff]' : 'text-[#ff007f]'
+                }`}
+              />
+              <span className="truncate">
+                {pickingMode === 'origin'
+                  ? 'Click map to set starting point'
+                  : 'Click map to drop destination'}
+              </span>
             </span>
             <button
               type="button"
@@ -198,11 +364,27 @@ export function SearchBar() {
             transition={{ duration: 0.16 }}
             className="vice-glass rounded-2xl overflow-hidden divide-y divide-white/5 max-h-72 overflow-y-auto"
           >
-            {query.trim().length < 2 ? (
+            {currentQuery.trim().length < 2 ? (
               <div>
-                <div className="px-3.5 py-2 flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-[#00f0ff]">
-                  <Sparkles className="w-3 h-3" />
-                  Leonida Hotspots
+                <div className="px-3.5 py-2 flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-[#00f0ff]">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3" />
+                    {activeField === 'origin'
+                      ? 'Pick Starting Point'
+                      : 'Leonida Hotspots'}
+                  </span>
+                  {activeField === 'origin' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveField(null);
+                        void handleUseCurrentLocation();
+                      }}
+                      className="text-[10px] text-[#ff007f] hover:underline cursor-pointer"
+                    >
+                      Use My Location
+                    </button>
+                  )}
                 </div>
                 {VICE_CITY_PRESETS.map((preset) => (
                   <button
@@ -211,7 +393,11 @@ export function SearchBar() {
                     onClick={() => handleSelectPlace(preset)}
                     className="w-full text-left px-3.5 py-2.5 hover:bg-[#ff007f]/15 transition-colors flex items-start gap-2.5 cursor-pointer"
                   >
-                    <MapPin className="w-4 h-4 text-[#ff007f] shrink-0 mt-0.5" />
+                    <MapPin
+                      className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        activeField === 'origin' ? 'text-[#00f0ff]' : 'text-[#ff007f]'
+                      }`}
+                    />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-100 truncate">
                         {preset.name}
@@ -236,7 +422,11 @@ export function SearchBar() {
                   onClick={() => handleSelectPlace(item)}
                   className="w-full text-left px-3.5 py-2.5 hover:bg-[#ff007f]/15 transition-colors flex items-start gap-2.5 cursor-pointer"
                 >
-                  <MapPin className="w-4 h-4 text-[#00f0ff] shrink-0 mt-0.5" />
+                  <MapPin
+                    className={`w-4 h-4 shrink-0 mt-0.5 ${
+                      activeField === 'origin' ? 'text-[#00f0ff]' : 'text-[#ff007f]'
+                    }`}
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-100 truncate">
                       {item.name}

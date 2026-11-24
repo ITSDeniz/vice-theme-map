@@ -16,6 +16,8 @@ interface NavState {
   isLocating: boolean;
   cameraRecenterNonce: number;
 
+  origin: Destination | null;
+  pickingMode: 'origin' | 'destination';
   destination: Destination | null;
   route: RouteData | null;
   isRouting: boolean;
@@ -37,6 +39,8 @@ interface NavState {
   setIsLocating: (isLocating: boolean) => void;
   triggerCameraRecenter: () => void;
 
+  setOrigin: (origin: Destination | null) => void;
+  setPickingMode: (mode: 'origin' | 'destination') => void;
   setDestination: (destination: Destination | null) => void;
   setRoute: (route: RouteData | null) => void;
   setIsRouting: (isRouting: boolean) => void;
@@ -64,6 +68,8 @@ export const useNavStore = create<NavState>((set) => ({
   isLocating: false,
   cameraRecenterNonce: 0,
 
+  origin: null,
+  pickingMode: 'destination',
   destination: null,
   route: null,
   isRouting: false,
@@ -86,6 +92,8 @@ export const useNavStore = create<NavState>((set) => ({
   triggerCameraRecenter: () =>
     set((state) => ({ cameraRecenterNonce: state.cameraRecenterNonce + 1 })),
 
+  setOrigin: (origin) => set({ origin }),
+  setPickingMode: (pickingMode) => set({ pickingMode }),
   setDestination: (destination) => set({ destination }),
   setRoute: (route) =>
     set({

@@ -113,7 +113,14 @@ export async function fetchRoute(
       throw new Error(data.message || 'No drivable route found between these points.');
     }
 
-    // Reject destinations snapped far across water / off-road (e.g. ocean clicks)
+    // Reject origin or destination snapped far across water / off-road
+    const originWaypoint = data.waypoints?.[0];
+    if (originWaypoint && originWaypoint.distance > MAX_ROAD_SNAP_METERS) {
+      throw new Error(
+        'Starting point is over water or too far from a drivable road. Pick a location on land.'
+      );
+    }
+
     const destWaypoint = data.waypoints?.[1];
     if (destWaypoint && destWaypoint.distance > MAX_ROAD_SNAP_METERS) {
       throw new Error(
