@@ -15,6 +15,7 @@ interface NavState {
   userLocation: LngLatTuple;
   isLocating: boolean;
   cameraRecenterNonce: number;
+  rotateRequest: { id: number; deltaDeg: number } | null;
 
   origin: Destination | null;
   pickingMode: 'origin' | 'destination';
@@ -38,6 +39,7 @@ interface NavState {
   setUserLocation: (coords: LngLatTuple) => void;
   setIsLocating: (isLocating: boolean) => void;
   triggerCameraRecenter: () => void;
+  requestMapRotate: (deltaDeg: number) => void;
 
   setOrigin: (origin: Destination | null) => void;
   setPickingMode: (mode: 'origin' | 'destination') => void;
@@ -67,6 +69,7 @@ export const useNavStore = create<NavState>((set) => ({
   userLocation: MIAMI_DEFAULT_COORDS,
   isLocating: false,
   cameraRecenterNonce: 0,
+  rotateRequest: null,
 
   origin: null,
   pickingMode: 'destination',
@@ -91,6 +94,8 @@ export const useNavStore = create<NavState>((set) => ({
   setIsLocating: (isLocating) => set({ isLocating }),
   triggerCameraRecenter: () =>
     set((state) => ({ cameraRecenterNonce: state.cameraRecenterNonce + 1 })),
+  requestMapRotate: (deltaDeg) =>
+    set({ rotateRequest: { id: Date.now() + Math.random(), deltaDeg } }),
 
   setOrigin: (origin) => set({ origin }),
   setPickingMode: (pickingMode) => set({ pickingMode }),

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -6,6 +6,8 @@ import {
   Crosshair,
   Layers,
   Loader2,
+  RotateCcw,
+  RotateCw,
   X,
 } from 'lucide-react';
 import { useNavStore } from '../../store/useNavStore';
@@ -18,9 +20,32 @@ export function MapControls() {
   const setIsLocating = useNavStore((s) => s.setIsLocating);
   const setUserLocation = useNavStore((s) => s.setUserLocation);
   const triggerCameraRecenter = useNavStore((s) => s.triggerCameraRecenter);
+  const requestMapRotate = useNavStore((s) => s.requestMapRotate);
   const trafficAlertActive = useNavStore((s) => s.trafficAlertActive);
   const toggleTrafficAlert = useNavStore((s) => s.toggleTrafficAlert);
   const showAlert = useNavStore((s) => s.showAlert);
+
+  const rotateHoldIntervalRef = useRef<number | null>(null);
+
+  const stopHoldRotate = () => {
+    if (rotateHoldIntervalRef.current !== null) {
+      window.clearInterval(rotateHoldIntervalRef.current);
+      rotateHoldIntervalRef.current = null;
+    }
+  };
+
+  const startHoldRotate = (deltaDeg: number) => {
+    stopHoldRotate();
+    playUiClick();
+    requestMapRotate(deltaDeg);
+    rotateHoldIntervalRef.current = window.setInterval(() => {
+      requestMapRotate(deltaDeg * 0.5);
+    }, 120);
+  };
+
+  useEffect(() => {
+    return () => stopHoldRotate();
+  }, []);
 
   const handleToggleMode = () => {
     playUiClick();
@@ -132,6 +157,32 @@ export function MapControls() {
             <Crosshair className="w-4 h-4 text-[#ff007f]" />
           )}
           <span className="hidden sm:inline">Locate Me</span>
+        </button>
+
+        <button
+          type="button"
+          onPointerDown={() => startHoldRotate(-45)}
+          onPointerUp={stopHoldRotate}
+          onPointerLeave={stopHoldRotate}
+          onPointerCancel={stopHoldRotate}
+          aria-label="Rotate map left"
+          title="Rotate left 45° (hold for 360°)"
+          className="vice-glass hover:border-[#00f0ff]/60 active:scale-95 transition-all rounded-xl p-2.5 text-slate-200 cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4 text-[#00f0ff]" />
+        </button>
+
+        <button
+          type="button"
+          onPointerDown={() => startHoldRotate(45)}
+          onPointerUp={stopHoldRotate}
+          onPointerLeave={stopHoldRotate}
+          onPointerCancel={stopHoldRotate}
+          aria-label="Rotate map right"
+          title="Rotate right 45° (hold for 360°)"
+          className="vice-glass hover:border-[#00f0ff]/60 active:scale-95 transition-all rounded-xl p-2.5 text-slate-200 cursor-pointer"
+        >
+          <RotateCw className="w-4 h-4 text-[#00f0ff]" />
         </button>
 
         <button

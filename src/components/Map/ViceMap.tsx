@@ -99,6 +99,7 @@ export function ViceMap() {
   const destination = useNavStore((s) => s.destination);
   const route = useNavStore((s) => s.route);
   const cameraRecenterNonce = useNavStore((s) => s.cameraRecenterNonce);
+  const rotateRequest = useNavStore((s) => s.rotateRequest);
 
   const activeOriginCoords = origin?.coordinates ?? userLocation;
 
@@ -120,6 +121,10 @@ export function ViceMap() {
       pitch: initialMode === '3D' ? 58 : 0,
       bearing: initialMode === '3D' ? -17 : 0,
       maxPitch: 75,
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchZoomRotate: true,
+      touchPitch: true,
       attributionControl: { compact: true },
     });
 
@@ -341,6 +346,19 @@ export function ViceMap() {
     });
   }, [mapMode]);
 
+  // Handle HUD 360-degree rotate button requests
+  useEffect(() => {
+    if (!rotateRequest) return;
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.easeTo({
+      bearing: map.getBearing() + rotateRequest.deltaDeg,
+      duration: 280,
+      easing: (t) => 1 - Math.pow(1 - t, 2),
+    });
+  }, [rotateRequest]);
+
   // Recenter camera on user location when requested
   useEffect(() => {
     if (cameraRecenterNonce === 0) return;
@@ -349,7 +367,7 @@ export function ViceMap() {
 
     const currentMode = useNavStore.getState().mapMode;
     map.flyTo({
-      center: userLocation,
+      center: activeOriginCoords,
       zoom: 15.6,
       pitch: currentMode === '3D' ? 58 : 0,
       bearing: currentMode === '3D' ? -17 : 0,
@@ -357,10 +375,13 @@ export function ViceMap() {
       curve: 1.3,
       essential: true,
     });
-  }, [cameraRecenterNonce, userLocation]);
+  }, [cameraRecenterNonce, activeOriginCoords]);
 
   return (
-    <div className="relative w-full h-full">
+    <div
+      className="relative w-full h-full"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div ref={mapContainerRef} className="w-full h-full" />
       <div className="vice-scanlines absolute inset-0 z-10" />
     </div>
