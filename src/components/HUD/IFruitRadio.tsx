@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -67,16 +67,6 @@ interface YTPlayer {
   getPlaylistIndex: () => number;
   loadVideoById: (videoId: string) => void;
   cueVideoById: (videoId: string) => void;
-  loadPlaylist: (opts: {
-    list: string;
-    listType: 'playlist';
-    index?: number;
-  }) => void;
-  cuePlaylist: (opts: {
-    list: string;
-    listType: 'playlist';
-    index?: number;
-  }) => void;
   getVideoData: () => { title?: string; video_id?: string };
   destroy: () => void;
 }
@@ -136,38 +126,58 @@ export function IFruitRadio() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [trackTitle, setTrackTitle] = useState<string>('');
 
-  const playerMountRef = useRef<HTMLDivElement | null>(null);
+  const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const playerReadyRef = useRef(false);
   const wantPlayRef = useRef(false);
+  const mutedRef = useRef(false);
   const shuffleRef = useRef(false);
   const trackIndexRef = useRef(0);
   const errorStreakRef = useRef(0);
-  const prevVideoIdRef = useRef('');
-  const isSwitchingStationRef = useRef(false);
   const stationRef = useRef<YouTubeRadioStation>(RADIO_STATIONS[0]);
+  const mountEpochRef = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const station = RADIO_STATIONS[stationIndex];
   stationRef.current = station;
   shuffleRef.current = isShuffle;
+  mutedRef.current = isMuted;
 
-  // Initialize keyless YouTube IFrame Player
-  useEffect(() => {
-    let mounted = true;
+  /**
+   * Destroys any existing YT.Player and mounts a fresh isolated player
+   * for the given station so playlists/tracks can never bleed across stations.
+   */
+  const mountPlayerForStation = useCallback((targetStation: YouTubeRadioStation) => {
+    const epoch = ++mountEpochRef.current;
+    playerReadyRef.current = false;
+    errorStreakRef.current = 0;
+    trackIndexRef.current = 0;
+
+    if (playerRef.current) {
+      try {
+        playerRef.current.destroy();
+      } catch {
+        // ignore
+      }
+      playerRef.current = null;
+    }
+
+    if (!hostRef.current) return;
+    hostRef.current.innerHTML = '';
+    const innerTarget = document.createElement('div');
+    hostRef.current.appendChild(innerTarget);
 
     void loadYouTubeIframeApi().then(() => {
-      if (!mounted || !playerMountRef.current || !window.YT?.Player) return;
+      if (epoch !== mountEpochRef.current || !window.YT?.Player) return;
 
-      const initial = stationRef.current;
-      const usePlaylist = isFullPlaylistId(initial.playlistId);
+      const usePlaylist = isFullPlaylistId(targetStation.playlistId);
 
-      playerRef.current = new window.YT.Player(playerMountRef.current, {
+      const player = new window.YT.Player(innerTarget, {
         height: '112',
         width: '200',
-        ...(usePlaylist ? {} : { videoId: initial.tracks[0] }),
+        ...(usePlaylist ? {} : { videoId: targetStation.tracks[0] }),
         playerVars: {
-          autoplay: 0,
+          autoplay: wantPlayRef.current ? 1 : 0,
           controls: 0,
           disablekb: 1,
           fs: 0,
@@ -175,38 +185,34 @@ export function IFruitRadio() {
           rel: 0,
           playsinline: 1,
           ...(usePlaylist
-            ? { listType: 'playlist', list: initial.playlistId! }
+            ? { listType: 'playlist', list: targetStation.playlistId! }
             : {}),
         },
         events: {
           onReady: () => {
-            if (!mounted) return;
+            if (epoch !== mountEpochRef.current) return;
             playerReadyRef.current = true;
+            if (mutedRef.current) {
+              player.mute();
+            } else {
+              player.unMute();
+            }
             if (usePlaylist) {
-              playerRef.current?.setShuffle(shuffleRef.current);
+              player.setShuffle(shuffleRef.current);
             }
             if (wantPlayRef.current) {
-              playerRef.current?.playVideo();
+              player.playVideo();
             }
           },
           onStateChange: (event) => {
-            if (!mounted) return;
+            if (epoch !== mountEpochRef.current) return;
             const code = event.data;
             // 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 0 = ENDED
             if (code === 1) {
-              const videoData = playerRef.current?.getVideoData();
-              if (
-                isSwitchingStationRef.current &&
-                videoData?.video_id &&
-                videoData.video_id === prevVideoIdRef.current
-              ) {
-                return;
-              }
-              isSwitchingStationRef.current = false;
               errorStreakRef.current = 0;
               setIsPlaying(true);
               setIsBuffering(false);
-              const title = videoData?.title?.trim();
+              const title = player.getVideoData()?.title?.trim();
               if (title) setTrackTitle(title);
             } else if (code === 3) {
               setIsBuffering(true);
@@ -216,101 +222,64 @@ export function IFruitRadio() {
                 setIsBuffering(false);
               }
             } else if (code === 0) {
-              // Auto-advance on track end
-              const curr = stationRef.current;
-              if (curr.tracks.length > 1) {
+              if (targetStation.tracks.length > 1 && !usePlaylist) {
                 const nextIdx = shuffleRef.current
-                  ? Math.floor(Math.random() * curr.tracks.length)
-                  : (trackIndexRef.current + 1) % curr.tracks.length;
+                  ? Math.floor(Math.random() * targetStation.tracks.length)
+                  : (trackIndexRef.current + 1) % targetStation.tracks.length;
                 trackIndexRef.current = nextIdx;
-                playerRef.current?.loadVideoById(curr.tracks[nextIdx]);
-              } else {
-                playerRef.current?.seekTo(0, true);
-                playerRef.current?.playVideo();
+                player.loadVideoById(targetStation.tracks[nextIdx]);
               }
             }
           },
           onError: () => {
-            if (!mounted || !playerRef.current) return;
-            const curr = stationRef.current;
+            if (epoch !== mountEpochRef.current) return;
             errorStreakRef.current += 1;
-            if (errorStreakRef.current > curr.tracks.length) {
+            if (errorStreakRef.current > targetStation.tracks.length) {
               setIsBuffering(false);
               setIsPlaying(false);
               return;
             }
-            const nextIdx = (trackIndexRef.current + 1) % curr.tracks.length;
+            const nextIdx =
+              (trackIndexRef.current + 1) % targetStation.tracks.length;
             trackIndexRef.current = nextIdx;
-            const fallbackId = curr.tracks[nextIdx];
+            const fallbackId = targetStation.tracks[nextIdx];
             if (wantPlayRef.current) {
-              playerRef.current.loadVideoById(fallbackId);
+              player.loadVideoById(fallbackId);
             } else {
-              playerRef.current.cueVideoById(fallbackId);
+              player.cueVideoById(fallbackId);
             }
           },
         },
       });
-    });
 
-    return () => {
-      mounted = false;
-      playerReadyRef.current = false;
-      playerRef.current?.destroy();
-      playerRef.current = null;
-    };
+      playerRef.current = player;
+    });
   }, []);
 
-  const loadStationMedia = (targetStation: YouTubeRadioStation) => {
-    const player = playerRef.current;
-    if (!player || !playerReadyRef.current) return;
-
-    const usePlaylist = isFullPlaylistId(targetStation.playlistId);
-    trackIndexRef.current = 0;
-
-    if (usePlaylist) {
-      if (wantPlayRef.current) {
-        setIsBuffering(true);
-        player.loadPlaylist({
-          list: targetStation.playlistId!,
-          listType: 'playlist',
-          index: 0,
-        });
-        player.setShuffle(shuffleRef.current);
-      } else {
-        player.cuePlaylist({
-          list: targetStation.playlistId!,
-          listType: 'playlist',
-          index: 0,
-        });
+  // Mount initial station on component mount
+  useEffect(() => {
+    mountPlayerForStation(RADIO_STATIONS[0]);
+    return () => {
+      mountEpochRef.current += 1;
+      playerReadyRef.current = false;
+      try {
+        playerRef.current?.destroy();
+      } catch {
+        // ignore
       }
-      return;
-    }
-
-    const startTrackIdx =
-      shuffleRef.current && targetStation.tracks.length > 1
-        ? Math.floor(Math.random() * targetStation.tracks.length)
-        : 0;
-    trackIndexRef.current = startTrackIdx;
-    const videoId = targetStation.tracks[startTrackIdx];
-
-    if (wantPlayRef.current) {
-      setIsBuffering(true);
-      player.loadVideoById(videoId);
-      player.playVideo();
-    } else {
-      player.cueVideoById(videoId);
-    }
-  };
+      playerRef.current = null;
+    };
+  }, [mountPlayerForStation]);
 
   const switchStation = (nextIndex: number) => {
     const nextStation = RADIO_STATIONS[nextIndex];
-    prevVideoIdRef.current = playerRef.current?.getVideoData()?.video_id ?? '';
-    isSwitchingStationRef.current = true;
-    errorStreakRef.current = 0;
     stationRef.current = nextStation;
     setStationIndex(nextIndex);
     setTrackTitle('');
-    loadStationMedia(nextStation);
+    if (wantPlayRef.current) {
+      setIsBuffering(true);
+    }
+    mountPlayerForStation(nextStation);
   };
 
   // Equalizer animation
@@ -400,7 +369,6 @@ export function IFruitRadio() {
     wantPlayRef.current = true;
     setIsBuffering(true);
 
-    // 1. If a full YouTube playlist is loaded, use native playlist navigation
     const ytPlaylist = player.getPlaylist?.();
     if (ytPlaylist && ytPlaylist.length > 1) {
       if (isShuffle) {
@@ -416,7 +384,6 @@ export function IFruitRadio() {
       return;
     }
 
-    // 2. If station has multiple track IDs, cycle or shuffle through them
     const curr = stationRef.current;
     if (curr.tracks.length > 1) {
       let nextIdx = (trackIndexRef.current + 1) % curr.tracks.length;
@@ -433,7 +400,6 @@ export function IFruitRadio() {
       return;
     }
 
-    // 3. Single continuous radio mix video: jump to next song segment (or random segment in Shuffle)
     const duration = player.getDuration?.() ?? 0;
     const currentTime = player.getCurrentTime?.() ?? 0;
     if (duration > 180) {
@@ -464,6 +430,7 @@ export function IFruitRadio() {
     playUiClick();
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    mutedRef.current = nextMuted;
     const player = playerRef.current;
     if (!player || !playerReadyRef.current) return;
     if (nextMuted) {
@@ -477,13 +444,12 @@ export function IFruitRadio() {
     <>
       {/* Hidden YouTube IFrame host */}
       <div
+        ref={hostRef}
         className="fixed -left-[9999px] bottom-0 w-[200px] h-[112px] opacity-0 pointer-events-none"
         aria-hidden="true"
-      >
-        <div ref={playerMountRef} />
-      </div>
+      />
 
-      <div className="hud-surface rounded-xl px-3 py-2 flex items-center gap-2.5 w-[286px] sm:w-[316px]">
+      <div className="hud-surface rounded-xl px-3 py-2 flex items-center gap-2.5 w-[294px] sm:w-[324px]">
         <button
           type="button"
           onClick={handleTogglePlay}
@@ -505,7 +471,7 @@ export function IFruitRadio() {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-[var(--font-display)] text-[11px] font-semibold uppercase tracking-wider text-[var(--hud-text-muted)]">
+            <span className="font-[var(--font-display)] text-[11px] font-semibold uppercase tracking-wider text-[var(--hud-text-muted)] whitespace-nowrap">
               iFruit Radio
             </span>
             <canvas
