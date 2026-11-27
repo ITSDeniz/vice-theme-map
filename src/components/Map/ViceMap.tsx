@@ -274,7 +274,17 @@ export function ViceMap() {
       .setLngLat(initialLocation)
       .addTo(map);
 
+    map.once('load', () => {
+      map.resize();
+    });
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       destMarkerRef.current?.remove();
       destMarkerRef.current = null;
       userMarkerRef.current?.remove();
@@ -413,7 +423,7 @@ export function ViceMap() {
 
   return (
     <div
-      className="relative w-full h-full"
+      className="absolute inset-0 w-full h-full"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div ref={mapContainerRef} className="w-full h-full" />

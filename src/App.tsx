@@ -7,6 +7,7 @@ import { TurnByTurnCard } from './components/HUD/TurnByTurnCard';
 import { Speedometer } from './components/HUD/Speedometer';
 import { IFruitRadio } from './components/HUD/IFruitRadio';
 import { TrafficAlertOverlay } from './components/HUD/TrafficAlertOverlay';
+import { WelcomeDisclaimer } from './components/HUD/WelcomeDisclaimer';
 import { useNavStore } from './store/useNavStore';
 import { useAutoHideHud } from './hooks/useAutoHideHud';
 
@@ -51,6 +52,7 @@ export default function App() {
       <TurnByTurnCard />
       <Speedometer />
       <AlertToast />
+      <WelcomeDisclaimer />
     </main>
   );
 }
