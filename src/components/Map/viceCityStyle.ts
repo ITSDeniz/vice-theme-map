@@ -32,6 +32,8 @@ export function applyViceCityTheme(
   let firstSymbolLayerId: string | undefined;
   let buildingSourceId: string | undefined;
   let buildingSourceLayer: string | undefined;
+  let transportSourceId: string | undefined;
+  let transportSourceLayer: string | undefined;
 
   for (const layer of style.layers) {
     const id = layer.id.toLowerCase();
@@ -44,11 +46,15 @@ export function applyViceCityTheme(
       'source' in layer &&
       typeof layer.source === 'string' &&
       'source-layer' in layer &&
-      typeof layer['source-layer'] === 'string' &&
-      layer['source-layer'].includes('building')
+      typeof layer['source-layer'] === 'string'
     ) {
-      buildingSourceId = layer.source;
-      buildingSourceLayer = layer['source-layer'];
+      if (layer['source-layer'].includes('building')) {
+        buildingSourceId = layer.source;
+        buildingSourceLayer = layer['source-layer'];
+      } else if (layer['source-layer'] === 'transportation') {
+        transportSourceId = layer.source;
+        transportSourceLayer = layer['source-layer'];
+      }
     }
 
     // 1. Background
@@ -131,13 +137,13 @@ export function applyViceCityTheme(
         }
       } else {
         if (id.includes('casing')) {
-          safeSetPaint(layer.id, 'line-color', '#0d091a');
+          safeSetPaint(layer.id, 'line-color', '#0a0714');
         } else if (id.includes('motorway') || id.includes('trunk')) {
-          safeSetPaint(layer.id, 'line-color', '#2d1c45');
+          safeSetPaint(layer.id, 'line-color', '#3a245c');
         } else if (id.includes('primary') || id.includes('secondary')) {
-          safeSetPaint(layer.id, 'line-color', '#211c3a');
+          safeSetPaint(layer.id, 'line-color', '#29214a');
         } else {
-          safeSetPaint(layer.id, 'line-color', '#17172e');
+          safeSetPaint(layer.id, 'line-color', '#1a1a34');
         }
       }
       continue;
@@ -214,7 +220,111 @@ export function applyViceCityTheme(
     }
   }
 
-  // 8. Add 3D Vice City Buildings (fill-extrusion)
+  // 8. Elevated Bridges & Overpasses (3D shadow, deck thickness, edge rails & surface)
+  const tSourceId = transportSourceId ?? 'openmaptiles';
+  const tSourceLayer = transportSourceLayer ?? 'transportation';
+
+  if (map.getSource(tSourceId) && !map.getLayer('vice-bridge-shadow')) {
+    const bridgeFilter: maplibregl.FilterSpecification = [
+      'all',
+      ['==', ['get', 'brunnel'], 'bridge'],
+      [
+        'in',
+        ['get', 'class'],
+        ['literal', ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor']],
+      ],
+    ];
+
+    const widthScale = (extra: number): maplibregl.ExpressionSpecification => [
+      'interpolate',
+      ['exponential', 1.5],
+      ['zoom'],
+      10,
+      ['match', ['get', 'class'], ['motorway', 'trunk'], 2.5 + extra, 1.5 + extra],
+      14,
+      ['match', ['get', 'class'], ['motorway', 'trunk'], 8 + extra, ['primary', 'secondary'], 6 + extra, 4 + extra],
+      18,
+      ['match', ['get', 'class'], ['motorway', 'trunk'], 20 + extra, ['primary', 'secondary'], 15 + extra, 10 + extra],
+    ];
+
+    // Drop shadow cast onto water/ground below elevated bridges
+    map.addLayer(
+      {
+        id: 'vice-bridge-shadow',
+        type: 'line',
+        source: tSourceId,
+        'source-layer': tSourceLayer,
+        minzoom: 11,
+        filter: bridgeFilter,
+        layout: { 'line-join': 'round', 'line-cap': 'butt' },
+        paint: {
+          'line-color': isLight ? 'rgba(15, 23, 42, 0.30)' : 'rgba(0, 0, 0, 0.75)',
+          'line-width': widthScale(4),
+          'line-blur': 4,
+          'line-translate': [5, 9],
+          'line-translate-anchor': 'viewport',
+        },
+      },
+      firstSymbolLayerId
+    );
+
+    // Structural concrete/steel deck edge
+    map.addLayer(
+      {
+        id: 'vice-bridge-deck',
+        type: 'line',
+        source: tSourceId,
+        'source-layer': tSourceLayer,
+        minzoom: 11,
+        filter: bridgeFilter,
+        layout: { 'line-join': 'round', 'line-cap': 'butt' },
+        paint: {
+          'line-color': isLight ? '#64748b' : '#2e1065',
+          'line-width': widthScale(4.5),
+        },
+      },
+      firstSymbolLayerId
+    );
+
+    // Crisp illuminated bridge guardrails
+    map.addLayer(
+      {
+        id: 'vice-bridge-rails',
+        type: 'line',
+        source: tSourceId,
+        'source-layer': tSourceLayer,
+        minzoom: 12,
+        filter: bridgeFilter,
+        layout: { 'line-join': 'round', 'line-cap': 'butt' },
+        paint: {
+          'line-color': isLight ? '#38bdf8' : '#00f0ff',
+          'line-opacity': isLight ? 0.65 : 0.55,
+          'line-width': widthScale(2),
+        },
+      },
+      firstSymbolLayerId
+    );
+
+    // Clean top asphalt surface
+    map.addLayer(
+      {
+        id: 'vice-bridge-surface',
+        type: 'line',
+        source: tSourceId,
+        'source-layer': tSourceLayer,
+        minzoom: 11,
+        filter: bridgeFilter,
+        layout: { 'line-join': 'round', 'line-cap': 'butt' },
+        paint: {
+          'line-color': isLight ? '#ffffff' : '#352559',
+          'line-width': widthScale(0),
+        },
+      },
+      firstSymbolLayerId
+    );
+  }
+
+  // 9. Add 3D Vice City Buildings (fill-extrusion)
   const extrusionLayerId = 'vice-3d-buildings';
   if (!map.getLayer(extrusionLayerId)) {
     const sourceId = buildingSourceId ?? 'openmaptiles';
@@ -276,7 +386,7 @@ export function applyViceCityTheme(
               ['get', 'min_height'],
               0,
             ],
-            'fill-extrusion-opacity': isLight ? 0.9 : 0.88,
+            'fill-extrusion-opacity': isLight ? 0.98 : 0.95,
           },
         },
         firstSymbolLayerId
@@ -284,7 +394,7 @@ export function applyViceCityTheme(
     }
   }
 
-  // 9. Atmospheric lighting for 3D buildings
+  // 10. Atmospheric lighting for 3D buildings
   try {
     map.setLight(
       isLight
