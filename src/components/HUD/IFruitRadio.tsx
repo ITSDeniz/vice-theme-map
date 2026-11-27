@@ -249,10 +249,11 @@ export function IFruitRadio() {
               } else if (code === 3) {
                 setIsBuffering(true);
               } else if (code === 2) {
-                if (!wantPlayRef.current) {
-                  setIsPlaying(false);
-                  setIsBuffering(false);
-                }
+                setIsPlaying(false);
+                setIsBuffering(false);
+              } else if (code === 5) {
+                // Video cued and ready
+                setIsBuffering(false);
               } else if (code === 0 && !usePlaylist && st.tracks.length > 1) {
                 slot.history.push(slot.trackIdx);
                 const nextIdx = shuffleRef.current
@@ -544,10 +545,10 @@ export function IFruitRadio() {
 
   return (
     <>
-      {/* Hidden persistent YouTube IFrame pool (one per station) */}
+      {/* In-viewport ultra-low-opacity YouTube IFrame pool so Safari/iOS allows audio playback */}
       <div
         ref={hostRef}
-        className="fixed -left-[9999px] bottom-0 w-[200px] h-[240px] opacity-0 pointer-events-none"
+        className="fixed bottom-0 right-0 w-[200px] h-[112px] overflow-hidden opacity-[0.01] pointer-events-none z-0"
         aria-hidden="true"
       />
 
